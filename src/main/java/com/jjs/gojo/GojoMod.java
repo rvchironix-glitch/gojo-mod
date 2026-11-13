@@ -2,7 +2,10 @@ package com.jjs.gojo;
 
 import com.jjs.gojo.effect.BlueOrb;
 import com.jjs.gojo.effect.EffectManager;
+import com.jjs.gojo.effect.HollowPurple;
+import com.jjs.gojo.effect.RapidPunches;
 import com.jjs.gojo.effect.RedProjectile;
+import com.jjs.gojo.effect.TwofoldKick;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -143,7 +146,18 @@ public class GojoMod implements ModInitializer {
                 EffectManager.add(new RedProjectile(player));
                 yield true;
             }
-            // Stage 3+: RAPID_PUNCHES, TWOFOLD_KICK, R_SPECIAL
+            case RAPID_PUNCHES -> {
+                EffectManager.add(new RapidPunches(player));
+                yield true;
+            }
+            case TWOFOLD_KICK -> {
+                EffectManager.add(new TwofoldKick(player));
+                yield true;
+            }
+            case R_SPECIAL -> {
+                EffectManager.add(new HollowPurple(player));
+                yield true;
+            }
             default -> false;
         };
 

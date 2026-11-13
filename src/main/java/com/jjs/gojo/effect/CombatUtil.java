@@ -2,14 +2,24 @@ package com.jjs.gojo.effect;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CombatUtil {
     private CombatUtil() {}
 
     /** Damage as the owner (server-authoritative; respects PvP settings). */
     public static boolean damage(ServerPlayerEntity owner, LivingEntity target, float amount) {
+        return damage(owner, target, amount, false);
+    }
+
+    /** @param ignoreIframes true lets rapid multi-hit moves land every hit. */
+    public static boolean damage(ServerPlayerEntity owner, LivingEntity target, float amount, boolean ignoreIframes) {
         if (target == owner || !target.isAlive()) return false;
+        if (ignoreIframes) target.timeUntilRegen = 0;
         return target.damage(owner.getDamageSources().playerAttack(owner), amount);
     }
 
@@ -22,5 +32,31 @@ public final class CombatUtil {
         away = away.normalize().multiply(strength);
         target.setVelocity(away.x, up, away.z);
         target.velocityModified = true;
+    }
+
+    /** Living entities in front of the player within reach and a view cone (minDot = cosine of half angle). */
+    public static List<LivingEntity> inFront(ServerPlayerEntity p, double reach, double minDot) {
+        Vec3d eye = p.getEyePos();
+        Vec3d look = p.getRotationVec(1.0f).normalize();
+        Box box = p.getBoundingBox().stretch(look.multiply(reach)).expand(1.0);
+        List<LivingEntity> out = new ArrayList<>();
+        for (var e : p.getWorld().getOtherEntities(p, box, x -> x instanceof LivingEntity && x.isAlive() && !x.isSpectator())) {
+            Vec3d to = e.getPos().add(0, e.getHeight() / 2.0, 0).subtract(eye);
+            double dist = to.length();
+            if (dist < 1.0E-4) continue;
+            if (dist <= reach + e.getWidth() / 2.0 && to.normalize().dotProduct(look) >= minDot) {
+                out.add((LivingEntity) e);
+            }
+        }
+        return out;
+    }
+
+    /** Short forward lunge for the player. */
+    public static void lunge(ServerPlayerEntity p, double strength) {
+        Vec3d look = p.getRotationVec(1.0f).multiply(1, 0, 1);
+        if (look.lengthSquared() < 1.0E-4) return;
+        look = look.normalize().multiply(strength);
+        p.setVelocity(look.x, Math.max(p.getVelocity().y, 0.0), look.z);
+        p.velocityModified = true;
     }
 }
