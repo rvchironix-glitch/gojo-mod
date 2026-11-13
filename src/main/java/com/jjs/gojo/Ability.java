@@ -6,7 +6,8 @@ public enum Ability {
     REVERSAL_RED(2),
     RAPID_PUNCHES(3),
     TWOFOLD_KICK(4),
-    R_SPECIAL(5);
+    R_SPECIAL(5),
+    RCT(6);
 
     public final int id;
 
@@ -30,6 +31,7 @@ public enum Ability {
             case RAPID_PUNCHES -> c.punchesCooldownTicks;
             case TWOFOLD_KICK -> c.kickCooldownTicks;
             case R_SPECIAL -> c.specialCooldownTicks;
+            case RCT -> c.rctCooldownTicks;
         };
     }
 }

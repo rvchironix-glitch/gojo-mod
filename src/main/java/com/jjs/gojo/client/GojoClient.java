@@ -2,21 +2,23 @@ package com.jjs.gojo.client;
 
 import com.jjs.gojo.Ability;
 import com.jjs.gojo.GojoNet;
+import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.network.PacketByteBuf;
-import io.netty.buffer.Unpooled;
 import org.lwjgl.glfw.GLFW;
 
 public class GojoClient implements ClientModInitializer {
     private static final String CAT = "key.categories.gojomoveset";
 
-    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK;
+    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT;
 
     // double-tap tracking: 0 fwd, 1 back, 2 left, 3 right
     private static final boolean[] prevDown = new boolean[4];
@@ -36,15 +38,55 @@ public class GojoClient implements ClientModInitializer {
         SPECIAL = reg("key.gojomoveset.special", GLFW.GLFW_KEY_R);
         BLUE = reg("key.gojomoveset.blue", GLFW.GLFW_KEY_Z);
         RED = reg("key.gojomoveset.red", GLFW.GLFW_KEY_X);
-        PUNCHES = reg("key.gojomoveset.punches", GLFW.GLFW_KEY_C);
+        // Rapid Punches moved from C to H so Reverse Cursed Technique can default to C.
+        PUNCHES = reg("key.gojomoveset.punches", GLFW.GLFW_KEY_H);
         KICK = reg("key.gojomoveset.kick", GLFW.GLFW_KEY_V);
+        RCT = reg("key.gojomoveset.rct", GLFW.GLFW_KEY_C);
 
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.SYNC, (client, handler, buf, responseSender) -> {
+            int type = buf.readByte();
+            client.execute(() -> {
+                ClientState.type = type;
+                ClientState.synced = true;
+                if (type != 0 && client.currentScreen instanceof CharacterSelectScreen) {
+                    client.setScreen(null);
+                }
+            });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.COOLDOWN, (client, handler, buf, responseSender) -> {
+            int id = buf.readByte();
+            int remaining = buf.readInt();
+            int total = buf.readInt();
+            client.execute(() -> ClientState.setCooldown(id, remaining, total));
+        });
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientState.reset();
+            lastBlockSent = false;
+        });
+
+        HudRenderCallback.EVENT.register((ctx, tickDelta) -> GojoHud.render(ctx));
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
+        ClientState.reset();
     }
 
     private void onTick(MinecraftClient mc) {
         clientTick++;
-        if (mc.player == null || mc.currentScreen != null) {
+        ClientState.tick++;
+
+        if (mc.player == null) {
+            prevDown[0] = prevDown[1] = prevDown[2] = prevDown[3] = false;
+            lastBlockSent = false;
+            return;
+        }
+
+        // Server told us this player has not chosen yet: show the selection screen.
+        if (ClientState.synced && ClientState.type == 0 && mc.currentScreen == null) {
+            mc.setScreen(new CharacterSelectScreen());
+        }
+
+        if (mc.currentScreen != null) {
             prevDown[0] = prevDown[1] = prevDown[2] = prevDown[3] = false;
             sendBlock(false);
             return;
@@ -79,18 +121,22 @@ public class GojoClient implements ClientModInitializer {
         while (PUNCHES.wasPressed()) sendAbility(Ability.RAPID_PUNCHES, 0);
         while (KICK.wasPressed()) sendAbility(Ability.TWOFOLD_KICK, 0);
         while (SPECIAL.wasPressed()) sendAbility(Ability.R_SPECIAL, 0);
+        while (RCT.wasPressed()) sendAbility(Ability.RCT, 0);
 
         sendBlock(BLOCK.isPressed());
     }
 
     private static void sendAbility(Ability a, int dir) {
+        // Display-side gate only; the server enforces the real restriction.
+        if (ClientState.type != 2) return;
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         buf.writeByte(a.id);
         buf.writeByte(dir);
         ClientPlayNetworking.send(GojoNet.ABILITY, buf);
     }
 
-    private static void sendBlock(boolean blocking) {
+    private static void sendBlock(boolean wantsBlock) {
+        boolean blocking = wantsBlock && ClientState.type == 2;
         if (blocking == lastBlockSent) return;
         lastBlockSent = blocking;
         if (!ClientPlayNetworking.canSend(GojoNet.BLOCK)) return;

@@ -14,16 +14,19 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3f;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
-/** Lapis Blue: a drifting energy orb that pulls nearby living entities into it. */
+/** Lapis Blue: a drifting energy orb that pulls nearby living entities in and holds them helpless. */
 public class BlueOrb implements ServerEffect {
     private static final DustParticleEffect BLUE_DUST = new DustParticleEffect(new Vector3f(0.15f, 0.45f, 1.0f), 1.6f);
 
     private final ServerWorld world;
     private final UUID ownerId;
     private final Vec3d dir;
+    private final Set<UUID> held = new HashSet<>();
     private Vec3d pos;
     private int age;
 
@@ -40,6 +43,7 @@ public class BlueOrb implements ServerEffect {
         ServerPlayerEntity owner = world.getServer().getPlayerManager().getPlayer(ownerId);
         GojoConfig c = GojoConfig.get();
         if (owner == null || !owner.isAlive() || age >= c.blueDurationTicks) {
+            releaseAll();
             world.spawnParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
             world.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.2f, 1.6f);
             return true;
@@ -59,6 +63,14 @@ public class BlueOrb implements ServerEffect {
         }
         age++;
         return false;
+    }
+
+    private void releaseAll() {
+        for (UUID id : held) {
+            Entity e = world.getEntity(id);
+            if (e instanceof LivingEntity le) BlueTrap.release(le);
+        }
+        held.clear();
     }
 
     private void spawnVisuals() {
@@ -84,6 +96,7 @@ public class BlueOrb implements ServerEffect {
 
     private void pull(ServerPlayerEntity owner, GojoConfig c) {
         double r = c.blueRadius;
+        long now = world.getServer().getTicks();
         Box box = Box.of(pos, r * 2, r * 2, r * 2);
         List<Entity> targets = world.getOtherEntities(owner, box,
                 e -> e instanceof LivingEntity && e.isAlive() && !e.isSpectator());
@@ -93,6 +106,10 @@ public class BlueOrb implements ServerEffect {
             double dist = to.length();
             if (dist > r || dist < 0.05) continue;
 
+            // caught: cannot move on its own, cannot target or attack anything
+            BlueTrap.hold((LivingEntity) e, now);
+            held.add(e.getUuid());
+
             double strength = c.bluePullStrength * (1.0 - dist / r) + 0.1;
             Vec3d v = e.getVelocity().multiply(0.6).add(to.normalize().multiply(strength));
             if (v.length() > 1.2) v = v.normalize().multiply(1.2);
@@ -100,6 +117,9 @@ public class BlueOrb implements ServerEffect {
             e.velocityModified = true;
             e.fallDistance = 0;
 
+            if (age % 10 == 0) {
+                world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y, center.z, 3, 0.25, 0.3, 0.25, 0.05);
+            }
             if (dist < 2.5 && age % c.blueDamageIntervalTicks == 0) {
                 CombatUtil.damage(owner, (LivingEntity) e, c.blueDamage);
                 world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y, center.z, 6, 0.2, 0.2, 0.2, 0.1);

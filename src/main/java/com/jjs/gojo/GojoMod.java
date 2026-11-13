@@ -1,14 +1,17 @@
 package com.jjs.gojo;
 
 import com.jjs.gojo.effect.BlueOrb;
+import com.jjs.gojo.effect.BlueTrap;
 import com.jjs.gojo.effect.EffectManager;
 import com.jjs.gojo.effect.HollowPurple;
 import com.jjs.gojo.effect.RapidPunches;
+import com.jjs.gojo.effect.RctAura;
 import com.jjs.gojo.effect.RedProjectile;
 import com.jjs.gojo.effect.TwofoldKick;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -17,10 +20,12 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.registry.tag.DamageTypeTags;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +60,29 @@ public class GojoMod implements ModInitializer {
             server.execute(() -> {
                 PlayerState s = state(player);
                 long now = server.getTicks();
-                s.blocking = wants && player.isAlive() && !player.isSpectator() && !s.isGuardBroken(now);
+                s.blocking = wants && Characters.isSorcerer(player) && player.isAlive()
+                        && !player.isSpectator() && !s.isGuardBroken(now);
             });
+        });
+
+        // Permanent character choice: accepted exactly once per player per world.
+        ServerPlayNetworking.registerGlobalReceiver(GojoNet.CHOOSE, (server, player, handler, buf, sender) -> {
+            int wanted = buf.readByte();
+            server.execute(() -> Characters.choose(server, player, wanted));
+        });
+
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayerEntity p = handler.player;
+            Characters.applyHealth(p);
+            Characters.syncAll(p);
+        });
+
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            Characters.applyHealth(newPlayer);
+            if (!alive && Characters.isSorcerer(newPlayer)) {
+                newPlayer.setHealth(newPlayer.getMaxHealth());
+            }
+            Characters.syncAll(newPlayer);
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> STATES.remove(handler.player.getUuid()));
@@ -64,6 +90,7 @@ public class GojoMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(server -> EffectManager.tick());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             EffectManager.clear();
+            BlueTrap.clear();
             STATES.clear();
         });
 
@@ -79,15 +106,24 @@ public class GojoMod implements ModInitializer {
             }
         });
 
-        // Fall damage immunity after dashing + blocking
+        // Fall damage immunity after dashing + blocking + trapped attackers deal no damage
         ServerLivingEntityEvents.ALLOW_DAMAGE.register(GojoMod::allowDamage);
     }
 
     private static boolean allowDamage(LivingEntity entity, DamageSource source, float amount) {
+        MinecraftServer srv = entity.getServer();
+        if (srv == null) return true;
+        long now = srv.getTicks();
+
+        // Anything caught in Lapis Blue is helpless: it cannot hurt anyone.
+        Entity attacker = source.getAttacker();
+        if (attacker != null && BlueTrap.isTrapped(attacker, now)) {
+            return false;
+        }
+
         if (!(entity instanceof ServerPlayerEntity player)) return true;
         PlayerState s = STATES.get(player.getUuid());
         if (s == null) return true;
-        long now = player.getServer().getTicks();
 
         if (source.isOf(DamageTypes.FALL) && now < s.fallImmuneUntil) {
             return false;
@@ -132,6 +168,14 @@ public class GojoMod implements ModInitializer {
         Ability ability = Ability.fromId(abilityId);
         if (ability == null || !player.isAlive() || player.isSpectator()) return;
 
+        // Server-side restriction: only Sorcerers may use any ability.
+        if (!Characters.isSorcerer(player)) return;
+
+        if (ability == Ability.RCT) {
+            doRct(player);
+            return;
+        }
+
         PlayerState s = state(player);
         long now = player.getServer().getTicks();
         if (!s.isReady(ability, now)) return;
@@ -161,7 +205,29 @@ public class GojoMod implements ModInitializer {
             default -> false;
         };
 
-        if (fired) s.startCooldown(ability, now);
+        if (fired) {
+            s.startCooldown(ability, now);
+            Characters.sendCooldown(player, ability, ability.cooldownTicks(), ability.cooldownTicks());
+        }
+    }
+
+    /** Reverse Cursed Technique. Cooldown is stored in the world's save data so death/relog cannot reset it. */
+    private static void doRct(ServerPlayerEntity player) {
+        MinecraftServer server = player.getServer();
+        CharacterData data = CharacterData.get(server);
+        long now = server.getOverworld().getTime();
+        if (now < data.rctReadyAt(player.getUuid())) return;
+
+        if (player.getHealth() >= player.getMaxHealth()) {
+            player.sendMessage(Text.literal("Already at full health"), true);
+            return;
+        }
+
+        player.heal(GojoConfig.get().rctHealAmount); // LivingEntity.heal never exceeds max health
+        int cd = Ability.RCT.cooldownTicks();
+        data.setRctReadyAt(player.getUuid(), now + cd);
+        Characters.sendCooldown(player, Ability.RCT, cd, cd);
+        EffectManager.add(new RctAura(player));
     }
 
     private static boolean doDash(ServerPlayerEntity player, PlayerState s, int dir, long now) {

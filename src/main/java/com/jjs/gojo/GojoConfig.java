@@ -58,6 +58,10 @@ public class GojoConfig {
     public double specialRadius = 2.5;
     public double specialKnockback = 2.5;
 
+    // Reverse Cursed Technique
+    public int rctCooldownTicks = 200;
+    public float rctHealAmount = 8.0f;
+
     public int maxGuard = 100;
     public double guardCostPerDamage = 4.0;
     public int guardBreakTicks = 60;
