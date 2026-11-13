@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "gojomoveset",
+  "version": "${version}",
+  "name": "Jujutsu Shenanigans Gojo Moveset",
+  "description": "Gojo Satoru moveset inspired by Jujutsu Shenanigans.",
+  "authors": ["You"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.jjs.gojo.GojoMod"],
+    "client": ["com.jjs.gojo.client.GojoClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
