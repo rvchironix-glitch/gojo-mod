@@ -24,16 +24,16 @@ import com.jjs.gojo.effect.RctAura;
 import com.jjs.gojo.effect.RedProjectile;
 import com.jjs.gojo.effect.TwofoldKick;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import static net.minecraft.server.command.CommandManager.argument;
+import static net.minecraft.server.command.CommandManager.literal;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.server.command.CommandManager;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.damage.DamageTypes;
@@ -76,130 +76,79 @@ public class GojoMod implements ModInitializer {
 
     /** Starts a cooldown and tells the client (used by combos that trigger another move). */
     public static void startCooldown(ServerPlayerEntity p, Ability a, int ticks) {
-        PlayerState playerState = state(p);
-        if (!playerState.noCooldowns) playerState.startCooldown(a, p.getServer().getTicks(), ticks);
-        Characters.sendCooldown(p, a, playerState.noCooldowns ? 0 : ticks, ticks);
+        state(p).startCooldown(a, p.getServer().getTicks(), ticks);
+        Characters.sendCooldown(p, a, state(p).noCooldowns ? 0 : ticks, state(p).noCooldowns ? 0 : ticks);
     }
 
     @Override
     public void onInitialize() {
         GojoConfig.load();
 
-        // Admin/testing commands. Permission level 2 means cheats enabled / operator permission.
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(CommandManager.literal("gojo")
-                    .requires(source -> source.hasPermissionLevel(2))
-                    .then(CommandManager.literal("help").executes(ctx -> {
-                        ctx.getSource().sendFeedback(() -> Text.literal(
-                                "Commands: /gojo cooldowns <target> <off|on>; /gojo noexhaustion <target> <on|off>; "
-                                        + "/gojo burnout <target> <clear|set seconds>; /gojo ultimate <target> set <0-100>; "
-                                        + "/gojo status <target>"), false);
-                        return 1;
-                    }))
-                    .then(CommandManager.literal("cooldowns")
-                            .then(CommandManager.argument("target", EntityArgumentType.player())
-                                    .then(CommandManager.literal("off").executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        PlayerState state = state(target);
-                                        state.noCooldowns = true;
-                                        state.clearCooldowns();
-                                        MinecraftServer server = target.getServer();
-                                        long now = server.getOverworld().getTime();
-                                        CharacterData data = CharacterData.get(server);
-                                        data.setRctReadyAt(target.getUuid(), now);
-                                        long cursedUntil = data.cursedUntil(target.getUuid());
-                                        data.setCursed(target.getUuid(), cursedUntil, Math.max(now, cursedUntil));
-                                        for (Ability ability : Ability.values()) {
-                                            Characters.sendCooldown(target, ability, 0, 1);
-                                        }
-                                        CursedEnergy.sync(target);
-                                        ctx.getSource().sendFeedback(() -> Text.literal("No cooldowns enabled for " + target.getName().getString()), true);
-                                        return 1;
-                                    }))
-                                    .then(CommandManager.literal("on").executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        state(target).noCooldowns = false;
-                                        CursedEnergy.sync(target);
-                                        ctx.getSource().sendFeedback(() -> Text.literal("Normal cooldowns restored for " + target.getName().getString()), true);
-                                        return 1;
-                                    }))))
-                    .then(CommandManager.literal("burnout")
-                            .then(CommandManager.argument("target", EntityArgumentType.player())
-                                    .then(CommandManager.literal("clear").executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        Exhaustion.reduce(target.getServer(), target.getUuid(), Integer.MAX_VALUE);
-                                        state(target).exhaustedFlag = false;
-                                        ctx.getSource().sendFeedback(() -> Text.literal("Burnout cleared for " + target.getName().getString()), true);
-                                        return 1;
-                                    }))
-                                    .then(CommandManager.literal("set")
-                                            .then(CommandManager.argument("seconds", IntegerArgumentType.integer(0, 3600)).executes(ctx -> {
-                                                ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                                int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
-                                                MinecraftServer server = target.getServer();
-                                                long until = seconds == 0 ? 0 : server.getOverworld().getTime() + seconds * 20L;
-                                                CharacterData.get(server).setExhaustedUntil(target.getUuid(), until);
-                                                state(target).exhaustedFlag = seconds > 0;
-                                                Exhaustion.sync(target);
-                                                ctx.getSource().sendFeedback(() -> Text.literal("Burnout set to " + seconds + " seconds for " + target.getName().getString()), true);
-                                                return 1;
-                                            }))))))
-                    .then(CommandManager.literal("ultimate")
-                            .then(CommandManager.argument("target", EntityArgumentType.player())
-                                    .then(CommandManager.literal("set")
-                                            .then(CommandManager.argument("percent", IntegerArgumentType.integer(0, 100)).executes(ctx -> {
-                                                ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                                int percent = IntegerArgumentType.getInteger(ctx, "percent");
-                                                CharacterData.get(target.getServer()).setMeter(target.getUuid(), percent);
-                                                Ultimate.sync(target);
-                                                ctx.getSource().sendFeedback(() -> Text.literal("Ultimate meter set to " + percent + "% for " + target.getName().getString()), true);
-                                                return 1;
-                                            })))))
-                    .then(CommandManager.literal("cursedenergy")
-                            .then(CommandManager.literal("reset")
-                                    .then(CommandManager.argument("target", EntityArgumentType.player()).executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        long now = target.getServer().getOverworld().getTime();
-                                        CharacterData.get(target.getServer()).setCursed(target.getUuid(), now, now);
-                                        CursedEnergy.sync(target);
-                                        ctx.getSource().sendFeedback(() -> Text.literal("Cursed Energy timer reset for " + target.getName().getString()), true);
-                                        return 1;
-                                    }))))
-                    .then(CommandManager.literal("status")
-                            .then(CommandManager.argument("target", EntityArgumentType.player()).executes(ctx -> {
-                                ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                MinecraftServer server = target.getServer();
-                                CharacterData data = CharacterData.get(server);
-                                PlayerState state = state(target);
-                                int burnout = Exhaustion.remaining(server, target.getUuid()) / 20;
-                                int energy = (int) Math.max(0, data.cursedUntil(target.getUuid()) - server.getOverworld().getTime()) / 20;
-                                String report = "Gojo status for " + target.getName().getString()
-                                        + " | noCooldowns=" + state.noCooldowns
-                                        + " | noExhaustion=" + state.noExhaustion
-                                        + " | burnout=" + burnout + "s"
-                                        + " | ultimate=" + Math.round(data.meter(target.getUuid())) + "%"
-                                        + " | cursedEnergy=" + energy + "s";
-                                ctx.getSource().sendFeedback(() -> Text.literal(report), false);
-                                return 1;
-                            })))
-                    .then(CommandManager.literal("noexhaustion")
-                            .then(CommandManager.argument("target", EntityArgumentType.player())
-                                    .then(CommandManager.literal("on").executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        state(target).noExhaustion = true;
-                                        Exhaustion.reduce(target.getServer(), target.getUuid(), Integer.MAX_VALUE);
-                                        state(target).exhaustedFlag = false;
-                                        ctx.getSource().sendFeedback(() -> Text.literal("No exhaustion enabled for " + target.getName().getString()), true);
-                                        return 1;
-                                    }))
-                                    .then(CommandManager.literal("off").executes(ctx -> {
-                                        ServerPlayerEntity target = EntityArgumentType.getPlayer(ctx, "target");
-                                        state(target).noExhaustion = false;
-                                        ctx.getSource().sendFeedback(() -> Text.literal("Normal exhaustion restored for " + target.getName().getString()), true);
-                                        return 1;
-                                    })))
-            );
-        });
+        // Admin-only utilities. Permission level 2 means cheats enabled / operator access.
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                dispatcher.register(literal("gojo")
+                        .requires(source -> source.hasPermissionLevel(2))
+                        .then(literal("cooldowns")
+                                .then(literal("off").executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    state(p).noCooldowns = true;
+                                    CursedEnergy.sync(p);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Gojo admin: cooldowns disabled for you."), false);
+                                    return 1;
+                                }))
+                                .then(literal("on").executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    state(p).noCooldowns = false;
+                                    CursedEnergy.sync(p);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Gojo admin: cooldowns enabled for you."), false);
+                                    return 1;
+                                })))
+                        .then(literal("exhaustion")
+                                .then(literal("off").executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    state(p).noExhaustion = true;
+                                    Exhaustion.setRemaining(p.getServer(), p.getUuid(), 0);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Gojo admin: burnout disabled for you."), false);
+                                    return 1;
+                                }))
+                                .then(literal("on").executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    state(p).noExhaustion = false;
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Gojo admin: burnout enabled for you."), false);
+                                    return 1;
+                                })))
+                        .then(literal("burnout")
+                                .then(literal("clear").executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    Exhaustion.setRemaining(p.getServer(), p.getUuid(), 0);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Your burnout has been cleared."), false);
+                                    return 1;
+                                }))
+                                .then(literal("set").then(argument("seconds", IntegerArgumentType.integer(0, 3600)).executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
+                                    Exhaustion.setRemaining(p.getServer(), p.getUuid(), seconds * 20);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Burnout set to " + seconds + " seconds."), false);
+                                    return 1;
+                                }))))
+                        .then(literal("ultimate")
+                                .then(literal("set").then(argument("percent", IntegerArgumentType.integer(0, 100)).executes(ctx -> {
+                                    ServerPlayerEntity p = ctx.getSource().getPlayer();
+                                    int percent = IntegerArgumentType.getInteger(ctx, "percent");
+                                    CharacterData.get(p.getServer()).setMeter(p.getUuid(), percent);
+                                    Ultimate.sync(p);
+                                    ctx.getSource().sendFeedback(() -> Text.literal("Ultimate meter set to " + percent + "% ."), false);
+                                    return 1;
+                                }))))
+                        .then(literal("status").executes(ctx -> {
+                            ServerPlayerEntity p = ctx.getSource().getPlayer();
+                            int burnout = Exhaustion.remaining(p.getServer(), p.getUuid()) / 20;
+                            float meter = CharacterData.get(p.getServer()).meter(p.getUuid());
+                            ctx.getSource().sendFeedback(() -> Text.literal("Cooldown bypass: " + state(p).noCooldowns
+                                    + " | Burnout disabled: " + state(p).noExhaustion
+                                    + " | Burnout remaining: " + burnout + "s | Ultimate: " + (int) meter + "%"), false);
+                            return 1;
+                        }))));
 
         // Ability requests from clients. Everything is validated and executed on the server.
         ServerPlayNetworking.registerGlobalReceiver(GojoNet.ABILITY, (server, player, handler, buf, sender) -> {
@@ -215,7 +164,7 @@ public class GojoMod implements ModInitializer {
                 long now = server.getTicks();
                 s.blocking = wants && Characters.isSorcerer(player) && player.isAlive()
                         && !player.isSpectator() && !s.isGuardBroken(now)
-                        && (!Exhaustion.isExhausted(player) || s.noExhaustion) && !Stun.isStunned(player);
+                        && !Exhaustion.isExhausted(player) && !Stun.isStunned(player);
             });
         });
 
@@ -393,12 +342,9 @@ public class GojoMod implements ModInitializer {
             return;
         }
 
-        PlayerState s = state(player);
-
-        // Exhausted (after Hollow Nuke / Domain) or stunned: no abilities at all unless an admin has bypassed burnout.
-        boolean exhausted = Exhaustion.isExhausted(player) && !s.noExhaustion;
-        if (exhausted || Stun.isStunned(player)) {
-            if (exhausted) player.sendMessage(Text.literal("BURNOUT - only RCT is usable"), true);
+        // Exhausted (after Hollow Nuke / Domain) or stunned: no abilities at all. Checked here on the server.
+        if (Exhaustion.isExhausted(player) || Stun.isStunned(player)) {
+            if (Exhaustion.isExhausted(player)) player.sendMessage(Text.literal("BURNOUT - only RCT is usable"), true);
             return;
         }
 
@@ -413,6 +359,7 @@ public class GojoMod implements ModInitializer {
             return;
         }
 
+        PlayerState s = state(player);
         long now = player.getServer().getTicks();
 
         // Busy with a channelled move (Maximum Red charge, Hollow Nuke, Domain cast): nothing else may start.
@@ -423,7 +370,7 @@ public class GojoMod implements ModInitializer {
             player.sendMessage(Text.literal("Hollow Purple requires Limitless Awakened"), true);
             return;
         }
-        if (!s.noCooldowns && !s.isReady(ability, now)) return;
+        if (!s.isReady(ability, now)) return;
 
         boolean fired = switch (ability) {
             case DASH -> doDash(player, s, dir, now);
@@ -475,8 +422,9 @@ public class GojoMod implements ModInitializer {
             if (ability != Ability.R_SPECIAL && !ability.isGojoUltimateMove() && Ultimate.isGojoAwakened(player)) {
                 cd = Math.max(1, Math.round(cd * GojoConfig.get().awakenedCooldownMult));
             }
-            if (!s.noCooldowns) s.startCooldown(ability, now, cd);
-            Characters.sendCooldown(player, ability, s.noCooldowns ? 0 : cd, cd);
+            s.startCooldown(ability, now, cd);
+            if (s.noCooldowns) cd = 0;
+            Characters.sendCooldown(player, ability, cd, cd);
         }
     }
 
@@ -490,10 +438,10 @@ public class GojoMod implements ModInitializer {
         MinecraftServer server = player.getServer();
         CharacterData data = CharacterData.get(server);
         long now = server.getOverworld().getTime();
-        PlayerState state = state(player);
-        if (!state.noCooldowns && now < data.rctReadyAt(player.getUuid())) return;
+        PlayerState adminState = state(player);
+        if (!adminState.noCooldowns && now < data.rctReadyAt(player.getUuid())) return;
 
-        if (Exhaustion.isExhausted(player) && !state.noExhaustion) {
+        if (Exhaustion.isExhausted(player)) {
             // Burnout: RCT does not heal; it burns off exactly 10 s of the timer (same 10 s cooldown applies).
             int left = Exhaustion.reduce(server, player.getUuid(), 200);
             player.sendMessage(Text.literal(left > 0 ? "Burnout reduced by 10s" : "Burnout ended"), true);
@@ -505,8 +453,8 @@ public class GojoMod implements ModInitializer {
             player.heal(GojoConfig.get().rctHealAmount); // LivingEntity.heal never exceeds max health
         }
         int cd = Ability.RCT.cooldownTicks();
-        data.setRctReadyAt(player.getUuid(), state.noCooldowns ? now : now + cd);
-        Characters.sendCooldown(player, Ability.RCT, state.noCooldowns ? 0 : cd, cd);
+        data.setRctReadyAt(player.getUuid(), adminState.noCooldowns ? now : now + cd);
+        Characters.sendCooldown(player, Ability.RCT, adminState.noCooldowns ? 0 : cd, adminState.noCooldowns ? 0 : cd);
         EffectManager.add(new RctAura(player));
     }
 

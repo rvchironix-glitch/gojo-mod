@@ -61,10 +61,8 @@ public final class CursedEnergy {
         if (d.hero(id) != Heroes.YUJI || Ultimate.isAwakened(p)) return; // never for Gojo or Sukuna
         long now = worldTime(s);
         if (d.cursedUntil(id) > now) return;          // already running
-        PlayerState state = GojoMod.state(p);
-        if (!state.noCooldowns && now < d.cursedReadyAt(id)) return; // cooldown
-        long endsAt = now + DURATION_TICKS;
-        d.setCursed(id, endsAt, state.noCooldowns ? endsAt : endsAt + COOLDOWN_TICKS);
+        if (!GojoMod.state(p).noCooldowns && now < d.cursedReadyAt(id)) return; // cooldown
+        d.setCursed(id, now + DURATION_TICKS, now + DURATION_TICKS + COOLDOWN_TICKS);
         ServerWorld w = p.getServerWorld();
         w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 2.0f, 0.6f);
         w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5f, 0.5f);
@@ -144,9 +142,7 @@ public final class CursedEnergy {
         long until = d.cursedUntil(p.getUuid());
         long ready = d.cursedReadyAt(p.getUuid());
         int dur = (int) Math.max(0, until - now);
-        int cd = dur > 0
-                ? (GojoMod.state(p).noCooldowns ? 0 : COOLDOWN_TICKS)
-                : (int) Math.max(0, ready - now);
+        int cd = dur > 0 ? COOLDOWN_TICKS : (GojoMod.state(p).noCooldowns ? 0 : (int) Math.max(0, ready - now));
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeByte(0);
         buf.writeInt(dur);

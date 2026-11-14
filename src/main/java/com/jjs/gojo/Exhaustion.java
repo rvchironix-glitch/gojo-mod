@@ -30,19 +30,10 @@ public final class Exhaustion {
 
     /** Starts exhaustion for the configured duration. Works for offline players too (no effects then). */
     public static void apply(MinecraftServer server, UUID id) {
-        PlayerState state = GojoMod.stateOrNull(id);
-        if (state != null && state.noExhaustion) {
-            CharacterData.get(server).setExhaustedUntil(id, 0);
-            ServerPlayerEntity online = server.getPlayerManager().getPlayer(id);
-            if (online != null) {
-                state.exhaustedFlag = false;
-                sync(online);
-            }
-            return;
-        }
+        ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
+        if (p != null && GojoMod.state(p).noExhaustion) return;
         int ticks = Math.max(1, GojoConfig.get().exhaustionTicks);
         CharacterData.get(server).setExhaustedUntil(id, worldTime(server) + ticks);
-        ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
         if (p != null) {
             GojoMod.state(p).exhaustedFlag = true;
             sync(p);
@@ -65,6 +56,20 @@ public final class Exhaustion {
             sync(p);
         }
         return (int) newLeft;
+    }
+
+
+    /** Admin command helper: set or clear a player's remaining burnout time. */
+    public static int setRemaining(MinecraftServer server, UUID id, int ticks) {
+        long now = worldTime(server);
+        int safeTicks = Math.max(0, ticks);
+        CharacterData.get(server).setExhaustedUntil(id, safeTicks == 0 ? 0 : now + safeTicks);
+        ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
+        if (p != null) {
+            GojoMod.state(p).exhaustedFlag = safeTicks > 0;
+            sync(p);
+        }
+        return safeTicks;
     }
 
     /** Join / respawn: restore the effect and the HUD if exhaustion is still running. */

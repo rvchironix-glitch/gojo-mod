@@ -14,16 +14,12 @@ public class PlayerState {
     public long channelUntil;
     /** Used to notice the moment exhaustion ends. */
     public boolean exhaustedFlag;
-    /** Temporary admin/testing bypasses; reset when the player disconnects. */
+    /** Admin toggles; only changeable with permission-level-2 commands. */
     public boolean noCooldowns;
     public boolean noExhaustion;
 
-    public void clearCooldowns() {
-        java.util.Arrays.fill(cooldownEnd, 0L);
-    }
-
     public boolean isReady(Ability a, long now) {
-        return now >= cooldownEnd[a.ordinal()];
+        return noCooldowns || now >= cooldownEnd[a.ordinal()];
     }
 
     public int remaining(Ability a, long now) {
@@ -31,7 +27,7 @@ public class PlayerState {
     }
 
     public void startCooldown(Ability a, long now, int ticks) {
-        cooldownEnd[a.ordinal()] = now + ticks;
+        if (!noCooldowns) cooldownEnd[a.ordinal()] = now + ticks;
     }
 
     public boolean isGuardBroken(long now) {
