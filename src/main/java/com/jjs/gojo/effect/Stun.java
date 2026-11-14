@@ -33,7 +33,7 @@ public final class Stun {
     private Stun() {}
 
     public static void apply(MinecraftServer server, LivingEntity e, int ticks) {
-        UNTIL.put(e.getUuid(), server.getTicks() + ticks);
+        UNTIL.put(e.getUuid(), (long) server.getTicks() + ticks);
         hold(e, ticks, server.getTicks());
     }
 
