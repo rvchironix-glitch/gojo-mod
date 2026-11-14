@@ -57,7 +57,7 @@ public class YujiStrikes implements ServerEffect {
         if (flashThisStrike) flashed = true; // the single allowed Black Flash is spent, even if it hits only one target
         boolean first = true;
         for (LivingEntity t : targets) {
-            boolean flash = flashThisStrike && first; // 1.5x only for the Black Flash hit itself
+            boolean flash = flashThisStrike && first; // 3x only for the Black Flash hit itself
             first = false;
             CombatUtil.damage(owner, t, (last ? c.strikeFinisherDamage : c.strikeDamage)
                     * (flash ? com.jjs.gojo.CursedEnergy.FLASH_MULT : 1.0f), true);

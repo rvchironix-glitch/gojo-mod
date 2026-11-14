@@ -30,6 +30,16 @@ public final class Exhaustion {
 
     /** Starts exhaustion for the configured duration. Works for offline players too (no effects then). */
     public static void apply(MinecraftServer server, UUID id) {
+        PlayerState state = GojoMod.stateOrNull(id);
+        if (state != null && state.noExhaustion) {
+            CharacterData.get(server).setExhaustedUntil(id, 0);
+            ServerPlayerEntity online = server.getPlayerManager().getPlayer(id);
+            if (online != null) {
+                state.exhaustedFlag = false;
+                sync(online);
+            }
+            return;
+        }
         int ticks = Math.max(1, GojoConfig.get().exhaustionTicks);
         CharacterData.get(server).setExhaustedUntil(id, worldTime(server) + ticks);
         ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);

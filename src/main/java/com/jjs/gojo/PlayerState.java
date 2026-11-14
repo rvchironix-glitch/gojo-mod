@@ -14,6 +14,13 @@ public class PlayerState {
     public long channelUntil;
     /** Used to notice the moment exhaustion ends. */
     public boolean exhaustedFlag;
+    /** Temporary admin/testing bypasses; reset when the player disconnects. */
+    public boolean noCooldowns;
+    public boolean noExhaustion;
+
+    public void clearCooldowns() {
+        java.util.Arrays.fill(cooldownEnd, 0L);
+    }
 
     public boolean isReady(Ability a, long now) {
         return now >= cooldownEnd[a.ordinal()];

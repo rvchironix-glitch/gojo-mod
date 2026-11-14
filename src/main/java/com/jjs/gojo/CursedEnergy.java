@@ -22,7 +22,7 @@ import org.joml.Vector3f;
 
 /**
  * Yuji's R special: Cursed Energy. 30 s of cursed energy around his hands, 10 s cooldown after it ends.
- *  - While active, each normal M1 melee hit has an independent 20% chance to become a Black Flash (1.5x damage).
+ *  - While active, each normal M1 melee hit has an independent 20% chance to become a Black Flash (3x damage).
  *  - Abilities never get it, except Rapid Strikes (see YujiStrikes), which can flash at most once per use.
  * Timing is stored in the world save (overworld game time), so death, relog and restarts neither end it early
  * nor reset its cooldown. Everything is decided on the server.
@@ -31,7 +31,7 @@ public final class CursedEnergy {
     public static final int DURATION_TICKS = 600;   // exactly 30 s
     public static final int COOLDOWN_TICKS = 200;   // exactly 10 s, counted from the end of the effect
     public static final float FLASH_CHANCE = 0.20f;
-    public static final float FLASH_MULT = 1.5f;
+    public static final float FLASH_MULT = 3.0f;
 
     private static final DustParticleEffect VIOLET = new DustParticleEffect(new Vector3f(0.45f, 0.05f, 0.85f), 1.3f);
 
@@ -61,8 +61,10 @@ public final class CursedEnergy {
         if (d.hero(id) != Heroes.YUJI || Ultimate.isAwakened(p)) return; // never for Gojo or Sukuna
         long now = worldTime(s);
         if (d.cursedUntil(id) > now) return;          // already running
-        if (now < d.cursedReadyAt(id)) return;        // cooldown
-        d.setCursed(id, now + DURATION_TICKS, now + DURATION_TICKS + COOLDOWN_TICKS);
+        PlayerState state = GojoMod.state(p);
+        if (!state.noCooldowns && now < d.cursedReadyAt(id)) return; // cooldown
+        long endsAt = now + DURATION_TICKS;
+        d.setCursed(id, endsAt, state.noCooldowns ? endsAt : endsAt + COOLDOWN_TICKS);
         ServerWorld w = p.getServerWorld();
         w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 2.0f, 0.6f);
         w.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5f, 0.5f);
@@ -109,7 +111,7 @@ public final class CursedEnergy {
 
         GojoMod.inAbility = true;
         try {
-            victim.damage(source, amount * FLASH_MULT); // same source, 1.5x the M1 damage
+            victim.damage(source, amount * FLASH_MULT); // same source, 3x the M1 damage
         } finally {
             GojoMod.inAbility = false;
         }
@@ -142,7 +144,9 @@ public final class CursedEnergy {
         long until = d.cursedUntil(p.getUuid());
         long ready = d.cursedReadyAt(p.getUuid());
         int dur = (int) Math.max(0, until - now);
-        int cd = dur > 0 ? COOLDOWN_TICKS : (int) Math.max(0, ready - now);
+        int cd = dur > 0
+                ? (GojoMod.state(p).noCooldowns ? 0 : COOLDOWN_TICKS)
+                : (int) Math.max(0, ready - now);
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeByte(0);
         buf.writeInt(dur);
