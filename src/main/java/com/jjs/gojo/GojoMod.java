@@ -258,14 +258,14 @@ public class GojoMod implements ModInitializer {
         if (ability == null) return;
 
         if (ability == Ability.RCT) {
-            if (Exhaustion.isExhausted(player) || Stun.isStunned(player)) return;
+            if (Stun.isStunned(player)) return; // RCT stays usable during burnout
             doRct(player);
             return;
         }
 
         // Exhausted (after Hollow Nuke / Domain) or stunned: no abilities at all. Checked here on the server.
         if (Exhaustion.isExhausted(player) || Stun.isStunned(player)) {
-            if (Exhaustion.isExhausted(player)) player.sendMessage(Text.literal("EXHAUSTED"), true);
+            if (Exhaustion.isExhausted(player)) player.sendMessage(Text.literal("BURNOUT - only RCT is usable"), true);
             return;
         }
 
@@ -355,12 +355,17 @@ public class GojoMod implements ModInitializer {
         long now = server.getOverworld().getTime();
         if (now < data.rctReadyAt(player.getUuid())) return;
 
-        if (player.getHealth() >= player.getMaxHealth()) {
-            player.sendMessage(Text.literal("Already at full health"), true);
-            return;
+        if (Exhaustion.isExhausted(player)) {
+            // Burnout: RCT does not heal; it burns off exactly 10 s of the timer (same 10 s cooldown applies).
+            int left = Exhaustion.reduce(server, player.getUuid(), 200);
+            player.sendMessage(Text.literal(left > 0 ? "Burnout reduced by 10s" : "Burnout ended"), true);
+        } else {
+            if (player.getHealth() >= player.getMaxHealth()) {
+                player.sendMessage(Text.literal("Already at full health"), true);
+                return;
+            }
+            player.heal(GojoConfig.get().rctHealAmount); // LivingEntity.heal never exceeds max health
         }
-
-        player.heal(GojoConfig.get().rctHealAmount); // LivingEntity.heal never exceeds max health
         int cd = Ability.RCT.cooldownTicks();
         data.setRctReadyAt(player.getUuid(), now + cd);
         Characters.sendCooldown(player, Ability.RCT, cd, cd);

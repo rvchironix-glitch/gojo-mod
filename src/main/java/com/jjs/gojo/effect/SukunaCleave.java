@@ -39,12 +39,15 @@ public class SukunaCleave implements ServerEffect {
         Vec3d origin = owner.getPos().add(0, 1.2, 0);
 
         // crescent arc, tilted a little for a diagonal cut
-        for (int deg = -70; deg <= 70; deg += 7) {
-            double a = Math.toRadians(deg);
-            Vec3d p = origin.add(flat.multiply(Math.cos(a) * 2.6)).add(right.multiply(Math.sin(a) * 2.6))
-                    .add(0, Math.sin(a) * 0.5, 0);
-            world.spawnParticles(Fx.CRIMSON, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0);
-            world.spawnParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.1);
+        for (int ring = 0; ring < 3; ring++) { // three nested arcs = a thick, heavy crescent
+            double rad = 2.2 + ring * 0.7;
+            for (int deg = -80; deg <= 80; deg += 5) {
+                double a = Math.toRadians(deg);
+                Vec3d p = origin.add(flat.multiply(Math.cos(a) * rad)).add(right.multiply(Math.sin(a) * rad))
+                        .add(0, Math.sin(a) * 0.6, 0);
+                world.spawnParticles(ring == 1 ? Fx.BLACK : Fx.CRIMSON, p.x, p.y, p.z, 2, 0.05, 0.05, 0.05, 0);
+                world.spawnParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.15);
+            }
         }
         Vec3d mid = origin.add(flat.multiply(2.0));
         world.spawnParticles(ParticleTypes.SWEEP_ATTACK, mid.x, mid.y, mid.z, 1, 0, 0, 0, 0);
@@ -52,10 +55,13 @@ public class SukunaCleave implements ServerEffect {
         List<LivingEntity> targets = CombatUtil.inFront(owner, 4.2, 0.2);
         for (LivingEntity t : targets) {
             CombatUtil.damage(owner, t, c.cleaveDamage, true);
-            CombatUtil.knockback(t, owner.getPos(), 1.4, 0.2);
+            CombatUtil.knockback(t, owner.getPos(), 2.0, 0.3);
             Vec3d at = t.getPos().add(0, t.getHeight() * 0.6, 0);
-            world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 20, 0.35, 0.35, 0.35, 0);
-            world.spawnParticles(Fx.BLACK, at.x, at.y, at.z, 10, 0.3, 0.3, 0.3, 0);
+            world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 45, 0.5, 0.5, 0.5, 0);
+            world.spawnParticles(Fx.BLACK, at.x, at.y, at.z, 25, 0.4, 0.4, 0.4, 0);
+            world.spawnParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 2, 0.3, 0.3, 0.3, 0);
+            world.spawnParticles(ParticleTypes.ELECTRIC_SPARK, at.x, at.y, at.z, 20, 0.4, 0.4, 0.4, 0.3);
+            world.playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.7f, 1.3f);
         }
 
         world.playSound(null, owner.getX(), owner.getY(), owner.getZ(),

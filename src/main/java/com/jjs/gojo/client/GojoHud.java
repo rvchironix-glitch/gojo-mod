@@ -149,11 +149,11 @@ public final class GojoHud {
         }
     }
 
-    /** Big red EXHAUSTED banner with the time left, centred above the hotbar area. */
+    /** Big red BURNOUT banner with the time left, centred above the hotbar area. */
     public static void drawExhausted(DrawContext ctx, TextRenderer tr, int sw, int sh) {
         if (!ClientState.exhausted()) return;
         int secs = (ClientState.exhaustedRemaining() + 19) / 20;
-        String text = "EXHAUSTED  " + secs + "s";
+        String text = "BURNOUT  " + secs + "s";
         float frac = ClientState.exhaustedRemaining() / (float) ClientState.exhaustedTotal();
         int w = 110;
         int x = sw / 2 - w / 2;
@@ -185,19 +185,20 @@ public final class GojoHud {
         boolean block = ab == null;
         boolean ultimate = ab == Ability.ULTIMATE;
         boolean locked = ab == Ability.R_SPECIAL && !ClientState.awakened();
+        boolean burnout = ClientState.exhausted() && ab != Ability.RCT; // RCT stays usable during burnout
         int remaining = (block || ultimate) ? 0 : ClientState.remaining(ab.id);
 
         boolean active;
         boolean ready;
         if (block) {
             active = GojoClient.isBlocking();
-            ready = !active && !ClientState.exhausted();
+            ready = !active && !burnout;
         } else if (ultimate) {
             active = ClientState.awakened();
-            ready = ClientState.meter >= 100f && !active && !ClientState.exhausted();
+            ready = ClientState.meter >= 100f && !active && !burnout;
         } else {
             active = false;
-            ready = !locked && remaining <= 0 && !ClientState.exhausted();
+            ready = !locked && remaining <= 0 && !burnout;
         }
 
         float gs = size / 24f * 1.3f;
@@ -231,7 +232,7 @@ public final class GojoHud {
             ctx.fill(x + 2, y + size - 3, x + size - 2, y + size - 1, withAlpha(0xFF55FF55, alpha));
         }
 
-        if (ClientState.exhausted() && !locked) {
+        if (burnout && !locked) {
             ctx.fill(x + 1, y + 1, x + size - 1, y + size - 1, withAlpha(0x80300000, alpha));
         }
 

@@ -43,10 +43,11 @@ public class MalevolentPressure implements ServerEffect {
         if (age % 5 == 0) {
             Fx.ring(world, center.add(0, 0.15, 0), r, 48, Fx.CRIMSON);
             Fx.ring(world, center.add(0, 0.15, 0), r * 0.5, 24, Fx.BLACK);
+            Fx.ring(world, center.add(0, 1.5, 0), r * 0.75, 36, Fx.CRIMSON);
         }
 
         // random slash marks all over the area
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 6; i++) {
             double a = world.getRandom().nextDouble() * Math.PI * 2;
             double d = Math.sqrt(world.getRandom().nextDouble()) * r;
             Vec3d p = center.add(Math.cos(a) * d, 0.3 + world.getRandom().nextDouble() * 2.2, Math.sin(a) * d);
@@ -62,7 +63,8 @@ public class MalevolentPressure implements ServerEffect {
                 CombatUtil.damage(owner, t, c.pressureDamagePerPulse, true);
                 t.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 30, 1, false, true, true));
                 Vec3d at = t.getPos().add(0, t.getHeight() * 0.5, 0);
-                world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 10, 0.3, 0.4, 0.3, 0);
+                world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 22, 0.4, 0.5, 0.4, 0);
+                world.spawnParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0.3, 0.3, 0.3, 0);
             }
             world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.5f, 0.5f);
             world.playSound(null, center.x, center.y, center.z, SoundEvents.ENTITY_WITHER_BREAK_BLOCK, SoundCategory.PLAYERS, 0.8f, 0.7f);

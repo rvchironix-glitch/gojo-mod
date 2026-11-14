@@ -26,7 +26,9 @@ import java.util.UUID;
 public class FlameArrow implements ServerEffect {
     private static final int CHARGE = 12;
     private static final double RANGE = 60.0;
-    private static final double RADIUS = 4.5;
+    private static final double RADIUS = 6.0;
+    /** Direct hit = this many times the base damage (the explosion does not hit the same target again). */
+    private static final float DIRECT_MULT = 1.4f;
 
     private final ServerWorld world;
     private final UUID ownerId;
@@ -63,7 +65,7 @@ public class FlameArrow implements ServerEffect {
                     RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, owner));
             if (hit.getType() != HitResult.Type.MISS) {
                 pos = hit.getPos();
-                explode(owner, c);
+                explode(owner, c, null);
                 return true;
             }
             pos = next;
@@ -72,7 +74,16 @@ public class FlameArrow implements ServerEffect {
             List<Entity> near = world.getOtherEntities(owner, Box.of(pos, 1.4, 1.4, 1.4),
                     e -> e instanceof LivingEntity && e.isAlive() && !e.isSpectator());
             if (!near.isEmpty() || traveled >= RANGE) {
-                explode(owner, c);
+                LivingEntity direct = null;
+                double bd = Double.MAX_VALUE;
+                for (Entity e : near) {
+                    double d = e.squaredDistanceTo(pos);
+                    if (d < bd) {
+                        bd = d;
+                        direct = (LivingEntity) e;
+                    }
+                }
+                explode(owner, c, direct);
                 return true;
             }
         }
@@ -108,20 +119,29 @@ public class FlameArrow implements ServerEffect {
     }
 
     private void trail() {
-        world.spawnParticles(ParticleTypes.FLAME, pos.x, pos.y, pos.z, 4, 0.1, 0.1, 0.1, 0.02);
+        world.spawnParticles(ParticleTypes.FLAME, pos.x, pos.y, pos.z, 9, 0.22, 0.22, 0.22, 0.03);
+        world.spawnParticles(ParticleTypes.LAVA, pos.x, pos.y, pos.z, 1, 0.1, 0.1, 0.1, 0);
         world.spawnParticles(Fx.ORANGE, pos.x, pos.y, pos.z, 3, 0.1, 0.1, 0.1, 0);
         world.spawnParticles(ParticleTypes.SMOKE, pos.x, pos.y, pos.z, 1, 0.05, 0.05, 0.05, 0.01);
     }
 
-    private void explode(ServerPlayerEntity owner, GojoConfig c) {
-        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
-        world.spawnParticles(ParticleTypes.FLAME, pos.x, pos.y, pos.z, 80, 1.5, 1.5, 1.5, 0.2);
-        world.spawnParticles(ParticleTypes.LAVA, pos.x, pos.y, pos.z, 20, 1.5, 1.0, 1.5, 0);
-        world.spawnParticles(Fx.ORANGE, pos.x, pos.y, pos.z, 40, 1.8, 1.8, 1.8, 0);
+    private void explode(ServerPlayerEntity owner, GojoConfig c, LivingEntity direct) {
+        world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 3, 1.0, 0.5, 1.0, 0);
+        world.spawnParticles(ParticleTypes.FLAME, pos.x, pos.y, pos.z, 200, 2.5, 2.5, 2.5, 0.3);
+        world.spawnParticles(ParticleTypes.LAVA, pos.x, pos.y, pos.z, 40, 2.5, 1.5, 2.5, 0);
+        world.spawnParticles(Fx.ORANGE, pos.x, pos.y, pos.z, 90, 3.0, 3.0, 3.0, 0);
+        world.spawnParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
+        Fx.ring(world, pos, RADIUS * 0.7, 48, Fx.ORANGE);
         world.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0f, 0.8f);
         world.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 1.5f, 0.5f);
 
+        if (direct != null && direct.isAlive()) {
+            CombatUtil.damage(owner, direct, c.flameArrowDamage * DIRECT_MULT, true);
+            CombatUtil.knockback(direct, pos.subtract(dir), 1.6, 0.5);
+            direct.setOnFireFor(6);
+        }
         for (LivingEntity t : Fx.around(owner, pos, RADIUS)) {
+            if (t == direct) continue; // never damaged twice by the same arrow
             double falloff = 1.0 - (t.getPos().add(0, t.getHeight() / 2.0, 0).distanceTo(pos) / RADIUS) * 0.5;
             CombatUtil.damage(owner, t, (float) (c.flameArrowDamage * falloff), true);
             CombatUtil.knockback(t, pos, 1.3 * falloff, 0.4);

@@ -62,17 +62,20 @@ public class Dismantle implements ServerEffect {
         double length = to.distanceTo(from);
         for (double d = 1.5; d < length; d += 2.5) {
             Vec3d center = from.add(dir.multiply(d));
-            Fx.line(world, center.subtract(blade.multiply(1.3)), center.add(blade.multiply(1.3)), 0.35, Fx.CRIMSON);
+            Fx.line(world, center.subtract(blade.multiply(1.8)), center.add(blade.multiply(1.8)), 0.3, Fx.CRIMSON);
             world.spawnParticles(ParticleTypes.CRIT, center.x, center.y, center.z, 2, 0.1, 0.1, 0.1, 0.05);
         }
         Fx.line(world, from, to, 1.0, Fx.BONE);
         world.spawnParticles(ParticleTypes.SWEEP_ATTACK, to.x, to.y, to.z, 1, 0, 0, 0, 0);
 
-        for (LivingEntity target : Fx.alongSegment(owner, from, to, 1.3)) {
+        for (LivingEntity target : Fx.alongSegment(owner, from, to, 1.5)) { // each target once per cut
             CombatUtil.damage(owner, target, c.dismantleDamage, true);
-            CombatUtil.knockback(target, from, 0.5, 0.1);
+            CombatUtil.knockback(target, from, 0.8, 0.15);
             Vec3d at = target.getPos().add(0, target.getHeight() * 0.5, 0);
-            world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 14, 0.3, 0.3, 0.3, 0);
+            world.spawnParticles(Fx.CRIMSON, at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0);
+            world.spawnParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0.2, 0.2, 0.2, 0);
+            world.spawnParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 15, 0.4, 0.4, 0.4, 0.3);
+            world.playSound(null, at.x, at.y, at.z, SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.0f, 0.8f);
         }
 
         world.playSound(null, owner.getX(), owner.getY(), owner.getZ(),

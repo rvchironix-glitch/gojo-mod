@@ -49,15 +49,26 @@ While Limitless Awakened is active, Gojo's four moves are replaced (same keys):
 | Key | Move | Behaviour |
 |---|---|---|
 | Z | Maximum Blue | huge Blue, pulls and holds everything in range, exactly 2 damage/s for exactly 10 s |
-| X | Maximum Red | exactly 4 s charge, then fires. Press X again during the charge (after ~0.4 s, target in sight) for the combo: red jumps behind the target, shoves it into Gojo, Black Flash, then Hollow Nuke |
+| X | Maximum Red | exactly 4 s charge, then fires. Press X again during the charge for a Black Flash instead (cancels the red): 35 damage once to the nearest target within `maxRedFlashRange` (4.5 blocks) in front of Gojo, strong knockback. No target = it whiffs and hurts nobody. No teleport, no pulling, never starts Hollow Nuke |
 | H | Hollow Nuke | Gojo rises, giant Blue forms, Red is fired into it: exactly 50 damage once per target, exactly 10 to Gojo, no block damage, then EXHAUSTED |
 | N | 0.2 Domain | stuns every mob/player in range for exactly 15 s (not Gojo, spectators or creative players), then EXHAUSTED |
 
-Exhaustion (default 20 s, `exhaustionTicks`): no abilities, no blocking, Nausea, red EXHAUSTED bar with the time left.
+Burnout (after Hollow Nuke / Domain, default 20 s, `exhaustionTicks`): no abilities, no blocking, red BURNOUT bar with the time left. No potion effects are applied; you can still move and look around normally.
+**RCT during burnout:** does not heal; it removes exactly 10 s from the burnout timer (ending it at zero) and uses its normal 10 s cooldown. Outside burnout RCT heals 4 hearts as before.
 It is stored in the world save so relogging cannot skip it, and always ends on its own.
 Six Eyes (Gojo only): permanent Night Vision (one effect, topped up every second) and through-wall outlines of
 nearby living things (`sixEyesRange`), drawn only on Gojo's own screen.
 New config keys: maxBlue*, maxRed*, hollowNukeCooldownTicks/Radius, domainCooldownTicks/Radius, exhaustionTicks, sixEyesRange.
+
+## Stage 5E: Sukuna damage (final values, `config/gojomoveset.json`)
+| Move | Before | Now |
+|---|---|---|
+| Cleave | 12 | 22 per hit, heavier knockback, thicker crescent |
+| Dismantle (3 cuts) | 7 per cut | 12 per cut (max 36), each cut hits a target once |
+| Flame Arrow | 14 | direct hit 26 x 1.4 = 36.4 (once), explosion 26 with falloff to 50% for others, radius 6, never hits the direct target twice, no block damage |
+| Malevolent Pressure (3 s) | 4 per 0.5 s pulse (8/s) | 7 per 0.5 s pulse (14/s, 6 pulses = 42 max), same 3 s |
+Old config files get these four numbers once (`configVersion`); edit them afterwards freely.
+Timings are unchanged: Gojo Limitless Awakened 120 s, Sukuna 60 s, and the meter resets to 0 when a transformation ends (recharge by fighting, no separate timed cooldown).
 
 ## HUD and touch controls
 - PC HUD: ability column on the right edge, ultimate meter directly above the armor row.
@@ -68,4 +79,4 @@ New config keys: maxBlue*, maxRed*, hollowNukeCooldownTicks/Radius, domainCooldo
   ability. Block toggles on/off. Auto-detection of mobile launchers is best-effort; override it in Customize Controls.
 
 ## Status
-Stages 5A, 5B, 5C and 5D written. Not compiled or played by the author; see the delivery notes for known limits.
+Stages 5A to 5E written. Not compiled or played by the author; see the delivery notes for known limits.

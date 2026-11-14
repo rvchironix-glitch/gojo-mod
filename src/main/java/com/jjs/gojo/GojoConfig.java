@@ -88,13 +88,13 @@ public class GojoConfig {
 
     // Sukuna (transformation, fixed 60 s in code)
     public int cleaveCooldownTicks = 100;
-    public float cleaveDamage = 12.0f;
+    public float cleaveDamage = 22.0f;
     public int dismantleCooldownTicks = 120;
-    public float dismantleDamage = 7.0f;
+    public float dismantleDamage = 12.0f;
     public int flameArrowCooldownTicks = 240;
-    public float flameArrowDamage = 14.0f;
+    public float flameArrowDamage = 26.0f;
     public int pressureCooldownTicks = 400;
-    public float pressureDamagePerPulse = 4.0f;
+    public float pressureDamagePerPulse = 7.0f;
     public double pressureRadius = 11.0;
 
     // Gojo ultimate moves. Fixed by design (not configurable): Maximum Blue = 2 dmg/s for 10 s,
@@ -105,7 +105,9 @@ public class GojoConfig {
     public int maxRedCooldownTicks = 300;
     public float maxRedDamage = 25.0f;
     public double maxRedRadius = 8.0;
-    public float maxRedComboFlashDamage = 20.0f;
+    /** Second press of Maximum Red = Black Flash on a target this close to Gojo (blocks). */
+    public double maxRedFlashRange = 4.5;
+    public float maxRedFlashDamage = 35.0f;
     public int hollowNukeCooldownTicks = 1200;
     public double hollowNukeRadius = 14.0;
     public int domainCooldownTicks = 1200;
@@ -122,6 +124,9 @@ public class GojoConfig {
     public int guardBreakTicks = 60;
     public int guardRegenIntervalTicks = 2;
 
+    /** Bumped when default values change so old config files pick up the new Sukuna / Black Flash numbers once. */
+    public int configVersion = 0;
+
     public static GojoConfig get() {
         return instance;
     }
@@ -131,7 +136,17 @@ public class GojoConfig {
         try {
             if (Files.exists(path)) {
                 GojoConfig loaded = GSON.fromJson(Files.readString(path), GojoConfig.class);
-                if (loaded != null) instance = loaded;
+                if (loaded != null) {
+                    instance = loaded;
+                    if (loaded.configVersion < 1) { // Stage 5E: stronger Sukuna, new Maximum Red flash numbers
+                        GojoConfig d = new GojoConfig();
+                        loaded.cleaveDamage = d.cleaveDamage;
+                        loaded.dismantleDamage = d.dismantleDamage;
+                        loaded.flameArrowDamage = d.flameArrowDamage;
+                        loaded.pressureDamagePerPulse = d.pressureDamagePerPulse;
+                        loaded.configVersion = 1;
+                    }
+                }
             }
             Files.writeString(path, GSON.toJson(instance));
         } catch (IOException | RuntimeException e) {

@@ -210,7 +210,7 @@ public class GojoClient implements ClientModInitializer {
     public static void sendAbility(Ability a, int dir) {
         // Display-side gate only; the server enforces the real restriction.
         if (ClientState.type != 2 || ClientState.hero == 0) return;
-        if (ClientState.exhausted()) return; // exhausted: the server rejects it too
+        if (ClientState.exhausted() && a != Ability.RCT) return; // burnout: only RCT; the server enforces it too
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         buf.writeByte(a.id);
         buf.writeByte(dir);

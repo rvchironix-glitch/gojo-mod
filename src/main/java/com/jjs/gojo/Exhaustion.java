@@ -2,8 +2,6 @@ package com.jjs.gojo;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -12,7 +10,7 @@ import java.util.UUID;
 
 /**
  * Exhaustion after Hollow Nuke / 0.2 Domain. While exhausted the player cannot use any ability (checked on the
- * server for every ability and for blocking) and has Nausea. The end time is stored in the world save, so
+ * server for every ability and for blocking). No potion effects are applied. The end time is stored in the world save, so
  * relogging, dying or restarting cannot skip it, and it always expires on its own.
  */
 public final class Exhaustion {
@@ -37,13 +35,26 @@ public final class Exhaustion {
         ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
         if (p != null) {
             GojoMod.state(p).exhaustedFlag = true;
-            applyNausea(p, ticks);
             sync(p);
         }
     }
 
-    private static void applyNausea(ServerPlayerEntity p, int ticks) {
-        p.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, ticks + 20, 0, false, false, true));
+    /**
+     * RCT during burnout: shortens the timer by {@code ticks} (never below zero). At zero the restrictions are
+     * lifted immediately and the HUD is updated. Returns the new remaining ticks.
+     */
+    public static int reduce(MinecraftServer server, UUID id, int ticks) {
+        long now = worldTime(server);
+        long until = CharacterData.get(server).exhaustedUntil(id);
+        long left = Math.max(0, until - now);
+        long newLeft = Math.max(0, left - ticks);
+        CharacterData.get(server).setExhaustedUntil(id, newLeft == 0 ? 0 : now + newLeft);
+        ServerPlayerEntity p = server.getPlayerManager().getPlayer(id);
+        if (p != null) {
+            GojoMod.state(p).exhaustedFlag = newLeft > 0;
+            sync(p);
+        }
+        return (int) newLeft;
     }
 
     /** Join / respawn: restore the effect and the HUD if exhaustion is still running. */
@@ -51,7 +62,6 @@ public final class Exhaustion {
         int rem = remaining(p.getServer(), p.getUuid());
         PlayerState st = GojoMod.state(p);
         st.exhaustedFlag = rem > 0;
-        if (rem > 0) applyNausea(p, rem);
         sync(p);
     }
 
@@ -61,8 +71,7 @@ public final class Exhaustion {
             PlayerState st = GojoMod.state(p);
             boolean now = isExhausted(p);
             if (st.exhaustedFlag && !now) {
-                p.removeStatusEffect(StatusEffects.NAUSEA);
-                sync(p);
+                sync(p); // timer ran out: tell the HUD (no potion effects to clean up)
             }
             st.exhaustedFlag = now;
         }
