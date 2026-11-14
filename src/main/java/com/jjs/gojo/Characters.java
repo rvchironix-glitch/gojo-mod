@@ -93,5 +93,6 @@ public final class Characters {
     public static void syncAll(ServerPlayerEntity p) {
         sync(p);
         sendRctCooldown(p);
+        Ultimate.sync(p);
     }
 }

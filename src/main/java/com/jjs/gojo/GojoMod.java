@@ -44,6 +44,11 @@ public class GojoMod implements ModInitializer {
         return STATES.computeIfAbsent(p.getUuid(), id -> new PlayerState());
     }
 
+    /** Null when the player has no live state (e.g. disconnected). */
+    public static PlayerState stateOrNull(UUID id) {
+        return STATES.get(id);
+    }
+
     @Override
     public void onInitialize() {
         GojoConfig.load();
@@ -88,6 +93,20 @@ public class GojoMod implements ModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> STATES.remove(handler.player.getUuid()));
 
         ServerTickEvents.END_SERVER_TICK.register(server -> EffectManager.tick());
+        // Defeating an enemy grants extra ultimate charge.
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            if (source.getAttacker() instanceof ServerPlayerEntity killer && killer != entity) {
+                Ultimate.charge(killer, GojoConfig.get().chargePerKill);
+            }
+        });
+
+        // A transformation never survives a server stop: end it so the meter resets.
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
+                if (Ultimate.isAwakened(p)) Ultimate.end(server, p.getUuid());
+            }
+        });
+
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             EffectManager.clear();
             BlueTrap.clear();
@@ -111,6 +130,26 @@ public class GojoMod implements ModInitializer {
     }
 
     private static boolean allowDamage(LivingEntity entity, DamageSource source, float amount) {
+        boolean allowed = allowDamageInner(entity, source, amount);
+        if (allowed && amount > 0f && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            chargeFromDamage(entity, source, amount);
+        }
+        return allowed;
+    }
+
+    /** Dealing damage and taking damage both fill the ultimate meter (not while in invulnerability frames). */
+    private static void chargeFromDamage(LivingEntity victim, DamageSource source, float amount) {
+        if (victim.timeUntilRegen > 10) return;
+        GojoConfig c = GojoConfig.get();
+        if (source.getAttacker() instanceof ServerPlayerEntity attacker && attacker != victim) {
+            Ultimate.charge(attacker, Math.min(amount, victim.getHealth()) * c.chargePerDamageDealt);
+        }
+        if (victim instanceof ServerPlayerEntity hurt) {
+            Ultimate.charge(hurt, amount * c.chargePerDamageTaken);
+        }
+    }
+
+    private static boolean allowDamageInner(LivingEntity entity, DamageSource source, float amount) {
         MinecraftServer srv = entity.getServer();
         if (srv == null) return true;
         long now = srv.getTicks();
@@ -176,8 +215,19 @@ public class GojoMod implements ModInitializer {
             return;
         }
 
+        if (ability == Ability.ULTIMATE) {
+            Ultimate.tryActivate(player);
+            return;
+        }
+
         PlayerState s = state(player);
         long now = player.getServer().getTicks();
+
+        // Hollow Purple is ultimate-only.
+        if (ability == Ability.R_SPECIAL && !Ultimate.isAwakened(player)) {
+            player.sendMessage(Text.literal("Hollow Purple requires Limitless Awakened"), true);
+            return;
+        }
         if (!s.isReady(ability, now)) return;
 
         boolean fired = switch (ability) {
@@ -206,8 +256,12 @@ public class GojoMod implements ModInitializer {
         };
 
         if (fired) {
-            s.startCooldown(ability, now);
-            Characters.sendCooldown(player, ability, ability.cooldownTicks(), ability.cooldownTicks());
+            int cd = ability.cooldownTicks();
+            if (ability != Ability.R_SPECIAL && Ultimate.isAwakened(player)) {
+                cd = Math.max(1, Math.round(cd * GojoConfig.get().awakenedCooldownMult));
+            }
+            s.startCooldown(ability, now, cd);
+            Characters.sendCooldown(player, ability, cd, cd);
         }
     }
 

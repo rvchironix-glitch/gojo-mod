@@ -1,6 +1,7 @@
 package com.jjs.gojo.effect;
 
 import com.jjs.gojo.GojoConfig;
+import com.jjs.gojo.Ultimate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.particle.DustParticleEffect;
@@ -95,7 +96,7 @@ public class BlueOrb implements ServerEffect {
     }
 
     private void pull(ServerPlayerEntity owner, GojoConfig c) {
-        double r = c.blueRadius;
+        double r = c.blueRadius * Ultimate.rangeMult(owner);
         long now = world.getServer().getTicks();
         Box box = Box.of(pos, r * 2, r * 2, r * 2);
         List<Entity> targets = world.getOtherEntities(owner, box,

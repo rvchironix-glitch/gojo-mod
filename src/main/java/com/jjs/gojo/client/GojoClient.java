@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 public class GojoClient implements ClientModInitializer {
     private static final String CAT = "key.categories.gojomoveset";
 
-    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT;
+    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT, ULT;
 
     // double-tap tracking: 0 fwd, 1 back, 2 left, 3 right
     private static final boolean[] prevDown = new boolean[4];
@@ -40,7 +40,9 @@ public class GojoClient implements ClientModInitializer {
         RED = reg("key.gojomoveset.red", GLFW.GLFW_KEY_X);
         // Rapid Punches moved from C to H so Reverse Cursed Technique can default to C.
         PUNCHES = reg("key.gojomoveset.punches", GLFW.GLFW_KEY_H);
-        KICK = reg("key.gojomoveset.kick", GLFW.GLFW_KEY_V);
+        // Twofold Kick moved from V to N so the Ultimate can default to V.
+        KICK = reg("key.gojomoveset.kick", GLFW.GLFW_KEY_N);
+        ULT = reg("key.gojomoveset.ultimate", GLFW.GLFW_KEY_V);
         RCT = reg("key.gojomoveset.rct", GLFW.GLFW_KEY_C);
 
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.SYNC, (client, handler, buf, responseSender) -> {
@@ -52,6 +54,13 @@ public class GojoClient implements ClientModInitializer {
                     client.setScreen(null);
                 }
             });
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.ULT, (client, handler, buf, responseSender) -> {
+            int hero = buf.readByte();
+            float meter = buf.readFloat();
+            int remaining = buf.readInt();
+            client.execute(() -> ClientState.setUltimate(hero, meter, remaining));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.COOLDOWN, (client, handler, buf, responseSender) -> {
@@ -66,7 +75,7 @@ public class GojoClient implements ClientModInitializer {
             lastBlockSent = false;
         });
 
-        HudRenderCallback.EVENT.register((ctx, tickDelta) -> GojoHud.render(ctx));
+        HudRenderCallback.EVENT.register((ctx, tickDelta) -> GojoHud.render(ctx, tickDelta));
         ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
         ClientState.reset();
     }
@@ -74,6 +83,7 @@ public class GojoClient implements ClientModInitializer {
     private void onTick(MinecraftClient mc) {
         clientTick++;
         ClientState.tick++;
+        ClientState.animate();
 
         if (mc.player == null) {
             prevDown[0] = prevDown[1] = prevDown[2] = prevDown[3] = false;
@@ -122,6 +132,7 @@ public class GojoClient implements ClientModInitializer {
         while (KICK.wasPressed()) sendAbility(Ability.TWOFOLD_KICK, 0);
         while (SPECIAL.wasPressed()) sendAbility(Ability.R_SPECIAL, 0);
         while (RCT.wasPressed()) sendAbility(Ability.RCT, 0);
+        while (ULT.wasPressed()) sendAbility(Ability.ULTIMATE, 0);
 
         sendBlock(BLOCK.isPressed());
     }

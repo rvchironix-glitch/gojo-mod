@@ -1,5 +1,6 @@
 package com.jjs.gojo.effect;
 
+import com.jjs.gojo.Ultimate;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Box;
@@ -20,7 +21,7 @@ public final class CombatUtil {
     public static boolean damage(ServerPlayerEntity owner, LivingEntity target, float amount, boolean ignoreIframes) {
         if (target == owner || !target.isAlive()) return false;
         if (ignoreIframes) target.timeUntilRegen = 0;
-        return target.damage(owner.getDamageSources().playerAttack(owner), amount);
+        return target.damage(owner.getDamageSources().playerAttack(owner), amount * Ultimate.damageMult(owner));
     }
 
     /** Horizontal knockback away from {@code from} plus an upward kick. */

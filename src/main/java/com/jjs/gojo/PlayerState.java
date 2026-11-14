@@ -8,6 +8,8 @@ public class PlayerState {
     public int guard = GojoConfig.get().maxGuard;
     public long guardBrokenUntil;
     public long fallImmuneUntil;
+    /** Server tick at which Limitless Awakened ends; 0 when not transformed. */
+    public long awakenedUntil;
 
     public boolean isReady(Ability a, long now) {
         return now >= cooldownEnd[a.ordinal()];
@@ -17,8 +19,8 @@ public class PlayerState {
         return (int) Math.max(0, cooldownEnd[a.ordinal()] - now);
     }
 
-    public void startCooldown(Ability a, long now) {
-        cooldownEnd[a.ordinal()] = now + a.cooldownTicks();
+    public void startCooldown(Ability a, long now, int ticks) {
+        cooldownEnd[a.ordinal()] = now + ticks;
     }
 
     public boolean isGuardBroken(long now) {

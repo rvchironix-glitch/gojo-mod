@@ -1,6 +1,7 @@
 package com.jjs.gojo.effect;
 
 import com.jjs.gojo.GojoConfig;
+import com.jjs.gojo.Ultimate;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.particle.DustParticleEffect;
@@ -78,7 +79,7 @@ public class RedProjectile implements ServerEffect {
     }
 
     private void explode(ServerPlayerEntity owner, GojoConfig c) {
-        double r = c.redExplosionRadius;
+        double r = c.redExplosionRadius * Ultimate.rangeMult(owner);
         world.spawnParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
         world.spawnParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
         world.spawnParticles(RED_DUST, pos.x, pos.y, pos.z, 60, r * 0.4, r * 0.4, r * 0.4, 0);

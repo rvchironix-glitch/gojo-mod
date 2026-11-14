@@ -18,6 +18,8 @@ import java.util.UUID;
 public class CharacterData extends PersistentState {
     private final Map<UUID, Integer> types = new HashMap<>();
     private final Map<UUID, Long> rctReady = new HashMap<>();
+    private final Map<UUID, Float> meters = new HashMap<>();
+    private final Map<UUID, Integer> heroes = new HashMap<>();
 
     public static CharacterData get(MinecraftServer server) {
         return server.getOverworld().getPersistentStateManager()
@@ -33,6 +35,8 @@ public class CharacterData extends PersistentState {
                 NbtCompound p = players.getCompound(key);
                 d.types.put(id, p.getInt("type"));
                 if (p.contains("rctReady")) d.rctReady.put(id, p.getLong("rctReady"));
+                if (p.contains("meter")) d.meters.put(id, p.getFloat("meter"));
+                if (p.contains("hero")) d.heroes.put(id, p.getInt("hero"));
             } catch (IllegalArgumentException ignored) {
                 // skip malformed entries
             }
@@ -45,10 +49,14 @@ public class CharacterData extends PersistentState {
         NbtCompound players = new NbtCompound();
         Set<UUID> ids = new HashSet<>(types.keySet());
         ids.addAll(rctReady.keySet());
+        ids.addAll(meters.keySet());
+        ids.addAll(heroes.keySet());
         for (UUID id : ids) {
             NbtCompound p = new NbtCompound();
             p.putInt("type", types.getOrDefault(id, Characters.NONE));
             if (rctReady.containsKey(id)) p.putLong("rctReady", rctReady.get(id));
+            if (meters.containsKey(id)) p.putFloat("meter", meters.get(id));
+            if (heroes.containsKey(id)) p.putInt("hero", heroes.get(id));
             players.put(id.toString(), p);
         }
         nbt.put("players", players);
@@ -73,6 +81,26 @@ public class CharacterData extends PersistentState {
 
     public void setRctReadyAt(UUID id, long worldTime) {
         rctReady.put(id, worldTime);
+        markDirty();
+    }
+
+    /** Ultimate charge, 0..100. */
+    public float meter(UUID id) {
+        return meters.getOrDefault(id, 0f);
+    }
+
+    public void setMeter(UUID id, float value) {
+        meters.put(id, Math.max(0f, Math.min(100f, value)));
+        markDirty();
+    }
+
+    /** Selected sorcerer character (see {@link Heroes}); defaults to Gojo. */
+    public int hero(UUID id) {
+        return heroes.getOrDefault(id, Heroes.GOJO);
+    }
+
+    public void setHero(UUID id, int hero) {
+        heroes.put(id, hero);
         markDirty();
     }
 }

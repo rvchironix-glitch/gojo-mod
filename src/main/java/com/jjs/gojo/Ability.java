@@ -7,7 +7,8 @@ public enum Ability {
     RAPID_PUNCHES(3),
     TWOFOLD_KICK(4),
     R_SPECIAL(5),
-    RCT(6);
+    RCT(6),
+    ULTIMATE(7);
 
     public final int id;
 
@@ -32,6 +33,7 @@ public enum Ability {
             case TWOFOLD_KICK -> c.kickCooldownTicks;
             case R_SPECIAL -> c.specialCooldownTicks;
             case RCT -> c.rctCooldownTicks;
+            case ULTIMATE -> 0;
         };
     }
 }

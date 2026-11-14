@@ -62,6 +62,16 @@ public class GojoConfig {
     public int rctCooldownTicks = 200;
     public float rctHealAmount = 8.0f;
 
+    // Ultimate meter (percent points)
+    public float chargePerDamageDealt = 1.0f;
+    public float chargePerDamageTaken = 0.5f;
+    public float chargePerKill = 10.0f;
+
+    // Gojo: Limitless Awakened (duration is fixed at 120 s in code)
+    public float awakenedDamageMult = 1.5f;
+    public float awakenedCooldownMult = 0.5f;
+    public double awakenedRangeMult = 1.4;
+
     public int maxGuard = 100;
     public double guardCostPerDamage = 4.0;
     public int guardBreakTicks = 60;
