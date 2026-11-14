@@ -15,6 +15,11 @@ public final class ClientState {
     public static int tick;
     private static int awakenedEnd;
     private static int awakenedTotal = 2400;
+    private static int exhaustEnd;
+    private static int exhaustTotal = 400;
+    /** Six Eyes passive (Gojo only) as told by the server. */
+    public static boolean sixEyes;
+    public static int sixEyesRange = 32;
     private static final int N = Ability.values().length;
     private static final int[] cdEnd = new int[N];
     private static final int[] cdTotal = new int[N];
@@ -29,6 +34,8 @@ public final class ClientState {
         meter = 0f;
         shownMeter = 0f;
         awakenedEnd = 0;
+        exhaustEnd = 0;
+        sixEyes = false;
         for (int i = 0; i < N; i++) {
             cdEnd[i] = 0;
             cdTotal[i] = 1;
@@ -41,6 +48,28 @@ public final class ClientState {
         awakenedTotal = Math.max(1, totalTicks);
         ClientState.meter = meter;
         awakenedEnd = awakenedRemainingTicks > 0 ? tick + awakenedRemainingTicks : 0;
+    }
+
+    public static void setExhaust(int remaining, int total) {
+        exhaustTotal = Math.max(1, total);
+        exhaustEnd = remaining > 0 ? tick + remaining : 0;
+    }
+
+    public static int exhaustedRemaining() {
+        return Math.max(0, exhaustEnd - tick);
+    }
+
+    /** Display only: the server enforces exhaustion on every ability and on blocking. */
+    public static boolean exhausted() {
+        return exhaustedRemaining() > 0;
+    }
+
+    public static int exhaustedTotal() {
+        return exhaustTotal;
+    }
+
+    public static boolean gojoAwakened() {
+        return hero == com.jjs.gojo.Heroes.GOJO && awakened();
     }
 
     public static int awakenedRemaining() {

@@ -1,5 +1,6 @@
 package com.jjs.gojo.effect;
 
+import com.jjs.gojo.GojoMod;
 import com.jjs.gojo.Ultimate;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -22,6 +23,33 @@ public final class CombatUtil {
         if (target == owner || !target.isAlive()) return false;
         if (ignoreIframes) target.timeUntilRegen = 0;
         return target.damage(owner.getDamageSources().playerAttack(owner), amount * Ultimate.damageMult(owner));
+    }
+
+    /**
+     * Damage that is NOT scaled by Limitless Awakened, ignores invulnerability frames and armor, and cannot be
+     * stopped by Gojo-mod blocking. Used by moves with fixed damage numbers. (Vanilla Resistance / absorption
+     * effects on the victim can still reduce it, as for any damage in the game.)
+     */
+    public static boolean damageExact(ServerPlayerEntity owner, LivingEntity target, float amount) {
+        if (target == owner || !target.isAlive()) return false;
+        target.timeUntilRegen = 0;
+        GojoMod.bypassGuard = true;
+        try {
+            return target.damage(owner.getDamageSources().indirectMagic(owner, owner), amount);
+        } finally {
+            GojoMod.bypassGuard = false;
+        }
+    }
+
+    /** Fixed self-damage (e.g. Hollow Nuke recoil). */
+    public static void selfDamageExact(ServerPlayerEntity owner, float amount) {
+        owner.timeUntilRegen = 0;
+        GojoMod.bypassGuard = true;
+        try {
+            owner.damage(owner.getDamageSources().magic(), amount);
+        } finally {
+            GojoMod.bypassGuard = false;
+        }
     }
 
     /** Horizontal knockback away from {@code from} plus an upward kick. */

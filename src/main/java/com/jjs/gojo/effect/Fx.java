@@ -1,6 +1,10 @@
 package com.jjs.gojo.effect;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
+import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
+import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
+import net.minecraft.text.Text;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
@@ -21,6 +25,24 @@ public final class Fx {
     public static final DustParticleEffect BONE = new DustParticleEffect(new Vector3f(0.95f, 0.9f, 0.85f), 1.0f);
 
     private Fx() {}
+
+    /** Right hand position (used by charge-up animations). */
+    public static Vec3d hand(ServerPlayerEntity p) {
+        Vec3d look = p.getRotationVec(1.0f);
+        Vec3d flat = new Vec3d(look.x, 0, look.z);
+        flat = flat.lengthSquared() < 1.0E-4 ? new Vec3d(0, 0, 1) : flat.normalize();
+        Vec3d right = new Vec3d(-flat.z, 0, flat.x);
+        return p.getEyePos().add(look.multiply(0.9)).add(right.multiply(0.35)).subtract(0, 0.4, 0);
+    }
+
+    /** Big on-screen title for everyone near {@code c} (so nearby players see the cinematic too). */
+    public static void broadcastTitle(ServerWorld w, Vec3d c, double r, Text title, Text subtitle) {
+        for (ServerPlayerEntity p : w.getPlayers(pl -> pl.squaredDistanceTo(c) <= r * r)) {
+            p.networkHandler.sendPacket(new TitleFadeS2CPacket(5, 40, 15));
+            p.networkHandler.sendPacket(new SubtitleS2CPacket(subtitle));
+            p.networkHandler.sendPacket(new TitleS2CPacket(title));
+        }
+    }
 
     /** Roughly where the player's fist is. */
     public static Vec3d fist(ServerPlayerEntity p) {

@@ -7,15 +7,21 @@ import java.util.List;
 /** Server-thread only. */
 public final class EffectManager {
     private static final List<ServerEffect> ACTIVE = new ArrayList<>();
+    /** Effects added while ticking (e.g. a combo that starts Hollow Nuke) wait here until the next tick. */
+    private static final List<ServerEffect> PENDING = new ArrayList<>();
     private static final int MAX_EFFECTS = 256;
 
     private EffectManager() {}
 
     public static void add(ServerEffect e) {
-        if (ACTIVE.size() < MAX_EFFECTS) ACTIVE.add(e);
+        if (ACTIVE.size() + PENDING.size() < MAX_EFFECTS) PENDING.add(e);
     }
 
     public static void tick() {
+        if (!PENDING.isEmpty()) {
+            ACTIVE.addAll(PENDING);
+            PENDING.clear();
+        }
         Iterator<ServerEffect> it = ACTIVE.iterator();
         while (it.hasNext()) {
             ServerEffect e = it.next();
@@ -31,5 +37,6 @@ public final class EffectManager {
 
     public static void clear() {
         ACTIVE.clear();
+        PENDING.clear();
     }
 }

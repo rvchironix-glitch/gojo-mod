@@ -43,6 +43,22 @@ Move keys 1-4 (Z, X, H, N) map to the current character's moves:
 Sukuna is a 60 s transformation, never a selectable character. The player skin is not replaced;
 Sukuna is shown with markings, extra eyes, aura, outline and title.
 
+## Stage 5D: Gojo ultimate overhaul
+While Limitless Awakened is active, Gojo's four moves are replaced (same keys):
+
+| Key | Move | Behaviour |
+|---|---|---|
+| Z | Maximum Blue | huge Blue, pulls and holds everything in range, exactly 2 damage/s for exactly 10 s |
+| X | Maximum Red | exactly 4 s charge, then fires. Press X again during the charge (after ~0.4 s, target in sight) for the combo: red jumps behind the target, shoves it into Gojo, Black Flash, then Hollow Nuke |
+| H | Hollow Nuke | Gojo rises, giant Blue forms, Red is fired into it: exactly 50 damage once per target, exactly 10 to Gojo, no block damage, then EXHAUSTED |
+| N | 0.2 Domain | stuns every mob/player in range for exactly 15 s (not Gojo, spectators or creative players), then EXHAUSTED |
+
+Exhaustion (default 20 s, `exhaustionTicks`): no abilities, no blocking, Nausea, red EXHAUSTED bar with the time left.
+It is stored in the world save so relogging cannot skip it, and always ends on its own.
+Six Eyes (Gojo only): permanent Night Vision (one effect, topped up every second) and through-wall outlines of
+nearby living things (`sixEyesRange`), drawn only on Gojo's own screen.
+New config keys: maxBlue*, maxRed*, hollowNukeCooldownTicks/Radius, domainCooldownTicks/Radius, exhaustionTicks, sixEyesRange.
+
 ## HUD and touch controls
 - PC HUD: ability column on the right edge, ultimate meter directly above the armor row.
 - Customize Controls (K): Edit Mode ON/OFF, drag elements, resize (scroll or Size +/-), opacity, Reset Layout.
@@ -52,4 +68,4 @@ Sukuna is shown with markings, extra eyes, aura, outline and title.
   ability. Block toggles on/off. Auto-detection of mobile launchers is best-effort; override it in Customize Controls.
 
 ## Status
-Stages 5A, 5B and 5C written. Not compiled or played by the author; see the delivery notes for known limits.
+Stages 5A, 5B, 5C and 5D written. Not compiled or played by the author; see the delivery notes for known limits.

@@ -17,6 +17,10 @@ public final class GojoNet {
     public static final Identifier HERO = new Identifier(GojoMod.MOD_ID, "hero");
     /** S2C: byte hero (0 = not chosen), float meter (0-100), int transformRemainingTicks, int transformTotalTicks */
     public static final Identifier ULT = new Identifier(GojoMod.MOD_ID, "ult");
+    /** S2C: int remainingTicks, int totalTicks (0 = not exhausted) */
+    public static final Identifier EXHAUST = new Identifier(GojoMod.MOD_ID, "exhaust");
+    /** S2C: boolean sixEyesActive, int range */
+    public static final Identifier PASSIVE = new Identifier(GojoMod.MOD_ID, "passive");
     /** S2C: byte abilityId, int remainingTicks, int totalTicks */
     public static final Identifier COOLDOWN = new Identifier(GojoMod.MOD_ID, "cooldown");
 }

@@ -10,6 +10,10 @@ public class PlayerState {
     public long fallImmuneUntil;
     /** Server tick at which Limitless Awakened ends; 0 when not transformed. */
     public long awakenedUntil;
+    /** While now < channelUntil the player is locked into a sequence (Max Red charge, Hollow Nuke, Domain). */
+    public long channelUntil;
+    /** Used to notice the moment exhaustion ends. */
+    public boolean exhaustedFlag;
 
     public boolean isReady(Ability a, long now) {
         return now >= cooldownEnd[a.ordinal()];

@@ -43,6 +43,15 @@ public final class GojoHud {
                     new Entry("RAPID_STRIKES", Ability.RAPID_STRIKES, "RS", "Strikes", 0xFFFF6A3A, GojoClient.KICK),
                     rct, dash, ult};
         }
+        if (ClientState.gojoAwakened()) { // Gojo, Limitless Awakened: the four moves are replaced
+            return new Entry[]{
+                    new Entry("MAXIMUM_BLUE", Ability.MAXIMUM_BLUE, "MB", "Max Blue", 0xFF3A7BFF, GojoClient.BLUE),
+                    new Entry("MAXIMUM_RED", Ability.MAXIMUM_RED, "MR", "Max Red", 0xFFFF3A3A, GojoClient.RED),
+                    new Entry("HOLLOW_NUKE", Ability.HOLLOW_NUKE, "HN", "Hollow Nuke", 0xFF9FE8FF, GojoClient.PUNCHES),
+                    new Entry("DOMAIN", Ability.DOMAIN, "DE", "0.2 Domain", 0xFFD59CFF, GojoClient.KICK),
+                    new Entry("R_SPECIAL", Ability.R_SPECIAL, "HP", "Purple", 0xFFB04AFF, GojoClient.SPECIAL),
+                    rct, dash, ult};
+        }
         return new Entry[]{ // Gojo
                 new Entry("LAPIS_BLUE", Ability.LAPIS_BLUE, "B", "Blue", 0xFF3A7BFF, GojoClient.BLUE),
                 new Entry("REVERSAL_RED", Ability.REVERSAL_RED, "R", "Red", 0xFFFF3A3A, GojoClient.RED),
@@ -118,6 +127,7 @@ public final class GojoHud {
         int sw = mc.getWindow().getScaledWidth();
         int sh = mc.getWindow().getScaledHeight();
         HudLayout.Data layout = HudLayout.get();
+        drawExhausted(ctx, tr, sw, sh);
 
         if (TouchMode.active()) {
             HudLayout.Item mi = layout.touchMeter;
@@ -137,6 +147,21 @@ public final class GojoHud {
             HudLayout.Item ci = layout.pcColumn;
             drawColumn(ctx, tr, list, columnRect(sw, sh, list.length, ci), ci.alpha);
         }
+    }
+
+    /** Big red EXHAUSTED banner with the time left, centred above the hotbar area. */
+    public static void drawExhausted(DrawContext ctx, TextRenderer tr, int sw, int sh) {
+        if (!ClientState.exhausted()) return;
+        int secs = (ClientState.exhaustedRemaining() + 19) / 20;
+        String text = "EXHAUSTED  " + secs + "s";
+        float frac = ClientState.exhaustedRemaining() / (float) ClientState.exhaustedTotal();
+        int w = 110;
+        int x = sw / 2 - w / 2;
+        int y = sh / 2 + 24;
+        ctx.fill(x - 1, y - 1, x + w + 1, y + 15, 0xFF000000);
+        ctx.fill(x, y, x + w, y + 14, 0xFF2A0A0A);
+        ctx.fill(x, y, x + (int) (w * frac), y + 14, 0xFF8A1A1A);
+        ctx.drawCenteredTextWithShadow(tr, text, sw / 2, y + 3, 0xFFFFFFFF);
     }
 
     // ------------------------------------------------------------------ drawing helpers (shared with the editor)
@@ -166,13 +191,13 @@ public final class GojoHud {
         boolean ready;
         if (block) {
             active = GojoClient.isBlocking();
-            ready = !active;
+            ready = !active && !ClientState.exhausted();
         } else if (ultimate) {
             active = ClientState.awakened();
-            ready = ClientState.meter >= 100f && !active;
+            ready = ClientState.meter >= 100f && !active && !ClientState.exhausted();
         } else {
             active = false;
-            ready = !locked && remaining <= 0;
+            ready = !locked && remaining <= 0 && !ClientState.exhausted();
         }
 
         float gs = size / 24f * 1.3f;
@@ -204,6 +229,10 @@ public final class GojoHud {
                     withAlpha(0xFFFFFFFF, alpha), size);
         } else if (ready) {
             ctx.fill(x + 2, y + size - 3, x + size - 2, y + size - 1, withAlpha(0xFF55FF55, alpha));
+        }
+
+        if (ClientState.exhausted() && !locked) {
+            ctx.fill(x + 1, y + 1, x + size - 1, y + size - 1, withAlpha(0x80300000, alpha));
         }
 
         if (touchStyle) {

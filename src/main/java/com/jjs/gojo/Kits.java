@@ -21,20 +21,21 @@ public final class Kits {
             case R_SPECIAL:
                 return hero == Heroes.GOJO ? Ability.R_SPECIAL : null;
             case LAPIS_BLUE:
-                return slot(hero, transformed, Ability.LAPIS_BLUE, Ability.DIVERGENT_FIST, Ability.CLEAVE);
+                return slot(hero, transformed, Ability.LAPIS_BLUE, Ability.MAXIMUM_BLUE, Ability.DIVERGENT_FIST, Ability.CLEAVE);
             case REVERSAL_RED:
-                return slot(hero, transformed, Ability.REVERSAL_RED, Ability.BLACK_FLASH, Ability.DISMANTLE);
+                return slot(hero, transformed, Ability.REVERSAL_RED, Ability.MAXIMUM_RED, Ability.BLACK_FLASH, Ability.DISMANTLE);
             case RAPID_PUNCHES:
-                return slot(hero, transformed, Ability.RAPID_PUNCHES, Ability.CRUSHING_BLOW, Ability.FLAME_ARROW);
+                return slot(hero, transformed, Ability.RAPID_PUNCHES, Ability.HOLLOW_NUKE, Ability.CRUSHING_BLOW, Ability.FLAME_ARROW);
             case TWOFOLD_KICK:
-                return slot(hero, transformed, Ability.TWOFOLD_KICK, Ability.RAPID_STRIKES, Ability.MALEVOLENT_PRESSURE);
+                return slot(hero, transformed, Ability.TWOFOLD_KICK, Ability.DOMAIN, Ability.RAPID_STRIKES, Ability.MALEVOLENT_PRESSURE);
             default:
                 return null; // character-specific ids are never accepted directly from a client
         }
     }
 
-    private static Ability slot(int hero, boolean transformed, Ability gojo, Ability yuji, Ability sukuna) {
-        if (hero == Heroes.GOJO) return gojo;
+    private static Ability slot(int hero, boolean transformed, Ability gojo, Ability gojoUltimate,
+                                Ability yuji, Ability sukuna) {
+        if (hero == Heroes.GOJO) return transformed ? gojoUltimate : gojo;
         if (hero == Heroes.YUJI) return transformed ? sukuna : yuji;
         return null;
     }

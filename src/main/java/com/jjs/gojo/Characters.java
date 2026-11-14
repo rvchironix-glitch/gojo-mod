@@ -75,6 +75,7 @@ public final class Characters {
         if (Ultimate.isAwakened(player)) return;
         CharacterData.get(server).setHero(player.getUuid(), hero);
         Ultimate.sync(player);
+        SixEyes.onHeroChange(player);
     }
 
     public static void sync(ServerPlayerEntity p) {
@@ -107,5 +108,8 @@ public final class Characters {
         sync(p);
         sendRctCooldown(p);
         Ultimate.sync(p);
+        SixEyes.refresh(p);
+        SixEyes.sync(p);
+        Exhaustion.onJoin(p);
     }
 }

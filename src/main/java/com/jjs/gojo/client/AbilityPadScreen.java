@@ -30,6 +30,7 @@ public class AbilityPadScreen extends Screen {
         ctx.drawCenteredTextWithShadow(textRenderer, "Tap an ability  -  tap anywhere else to close",
                 width / 2, 8, 0xFFFFFFFF);
 
+        GojoHud.drawExhausted(ctx, textRenderer, width, height);
         HudLayout.Data layout = HudLayout.get();
         GojoHud.Entry[] list = GojoHud.touchEntries();
         for (int i = 0; i < list.length; i++) {
@@ -60,6 +61,7 @@ public class AbilityPadScreen extends Screen {
     }
 
     private void activate(GojoHud.Entry e) {
+        if (ClientState.exhausted()) return; // exhausted: nothing can be used (the server enforces this too)
         if (e.ability() == null) { // Block toggles (a held key is not possible with a tap)
             GojoClient.touchBlock = !GojoClient.touchBlock;
             close();

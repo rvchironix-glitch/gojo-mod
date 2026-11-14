@@ -1,6 +1,11 @@
 package com.jjs.gojo;
 
 import com.jjs.gojo.effect.BlackFlash;
+import com.jjs.gojo.effect.DomainExpansion;
+import com.jjs.gojo.effect.HollowNuke;
+import com.jjs.gojo.effect.MaximumBlue;
+import com.jjs.gojo.effect.MaximumRed;
+import com.jjs.gojo.effect.Stun;
 import com.jjs.gojo.effect.BlueOrb;
 import com.jjs.gojo.effect.CrushingBlow;
 import com.jjs.gojo.effect.Dismantle;
@@ -47,6 +52,9 @@ public class GojoMod implements ModInitializer {
     public static final String MOD_ID = "gojomoveset";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+    /** Set only for the duration of one fixed-damage call (CombatUtil.damageExact): blocking and charging are skipped. */
+    public static boolean bypassGuard;
+
     private static final Map<UUID, PlayerState> STATES = new ConcurrentHashMap<>();
 
     public static PlayerState state(ServerPlayerEntity p) {
@@ -56,6 +64,12 @@ public class GojoMod implements ModInitializer {
     /** Null when the player has no live state (e.g. disconnected). */
     public static PlayerState stateOrNull(UUID id) {
         return STATES.get(id);
+    }
+
+    /** Starts a cooldown and tells the client (used by combos that trigger another move). */
+    public static void startCooldown(ServerPlayerEntity p, Ability a, int ticks) {
+        state(p).startCooldown(a, p.getServer().getTicks(), ticks);
+        Characters.sendCooldown(p, a, ticks, ticks);
     }
 
     @Override
@@ -75,7 +89,8 @@ public class GojoMod implements ModInitializer {
                 PlayerState s = state(player);
                 long now = server.getTicks();
                 s.blocking = wants && Characters.isSorcerer(player) && player.isAlive()
-                        && !player.isSpectator() && !s.isGuardBroken(now);
+                        && !player.isSpectator() && !s.isGuardBroken(now)
+                        && !Exhaustion.isExhausted(player) && !Stun.isStunned(player);
             });
         });
 
@@ -93,11 +108,13 @@ public class GojoMod implements ModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayerEntity p = handler.player;
             Characters.applyHealth(p);
+            p.setNoGravity(false); // a Hollow Nuke interrupted by a disconnect must not leave Gojo floating
             Characters.syncAll(p);
         });
 
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             Characters.applyHealth(newPlayer);
+            newPlayer.setNoGravity(false);
             if (!alive && Characters.isSorcerer(newPlayer)) {
                 newPlayer.setHealth(newPlayer.getMaxHealth());
             }
@@ -106,7 +123,12 @@ public class GojoMod implements ModInitializer {
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> STATES.remove(handler.player.getUuid()));
 
-        ServerTickEvents.END_SERVER_TICK.register(server -> EffectManager.tick());
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            EffectManager.tick();
+            Stun.tick(server);
+            Exhaustion.tick(server);
+            SixEyes.tick(server);
+        });
         // Defeating an enemy grants extra ultimate charge.
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             if (source.getAttacker() instanceof ServerPlayerEntity killer && killer != entity) {
@@ -124,6 +146,10 @@ public class GojoMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             EffectManager.clear();
             BlueTrap.clear();
+            Stun.clear();
+            MaximumRed.clearAll();
+            HollowNuke.clearAll();
+            DomainExpansion.clearAll();
             STATES.clear();
         });
 
@@ -145,7 +171,7 @@ public class GojoMod implements ModInitializer {
 
     private static boolean allowDamage(LivingEntity entity, DamageSource source, float amount) {
         boolean allowed = allowDamageInner(entity, source, amount);
-        if (allowed && amount > 0f && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+        if (allowed && !bypassGuard && amount > 0f && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             chargeFromDamage(entity, source, amount);
         }
         return allowed;
@@ -166,11 +192,12 @@ public class GojoMod implements ModInitializer {
     private static boolean allowDamageInner(LivingEntity entity, DamageSource source, float amount) {
         MinecraftServer srv = entity.getServer();
         if (srv == null) return true;
+        if (bypassGuard) return true; // fixed-damage moves (Maximum Blue / Hollow Nuke) cannot be blocked
         long now = srv.getTicks();
 
         // Anything caught in Lapis Blue is helpless: it cannot hurt anyone.
         Entity attacker = source.getAttacker();
-        if (attacker != null && BlueTrap.isTrapped(attacker, now)) {
+        if (attacker != null && (BlueTrap.isTrapped(attacker, now) || Stun.isStunned(attacker))) {
             return false;
         }
 
@@ -231,7 +258,20 @@ public class GojoMod implements ModInitializer {
         if (ability == null) return;
 
         if (ability == Ability.RCT) {
+            if (Exhaustion.isExhausted(player) || Stun.isStunned(player)) return;
             doRct(player);
+            return;
+        }
+
+        // Exhausted (after Hollow Nuke / Domain) or stunned: no abilities at all. Checked here on the server.
+        if (Exhaustion.isExhausted(player) || Stun.isStunned(player)) {
+            if (Exhaustion.isExhausted(player)) player.sendMessage(Text.literal("EXHAUSTED"), true);
+            return;
+        }
+
+        // Pressing Maximum Red again while it is running: combo (only valid during the charge window).
+        if (ability == Ability.MAXIMUM_RED && MaximumRed.isActive(player.getUuid())) {
+            MaximumRed.handleSecondPress(player);
             return;
         }
 
@@ -242,6 +282,9 @@ public class GojoMod implements ModInitializer {
 
         PlayerState s = state(player);
         long now = player.getServer().getTicks();
+
+        // Busy with a channelled move (Maximum Red charge, Hollow Nuke, Domain cast): nothing else may start.
+        if (now < s.channelUntil) return;
 
         // Hollow Purple is ultimate-only.
         if (ability == Ability.R_SPECIAL && !Ultimate.isGojoAwakened(player)) {
@@ -272,6 +315,13 @@ public class GojoMod implements ModInitializer {
                 EffectManager.add(new HollowPurple(player));
                 yield true;
             }
+            case MAXIMUM_BLUE -> {
+                EffectManager.add(new MaximumBlue(player));
+                yield true;
+            }
+            case MAXIMUM_RED -> MaximumRed.start(player);
+            case HOLLOW_NUKE -> HollowNuke.start(player);
+            case DOMAIN -> DomainExpansion.start(player);
             case DIVERGENT_FIST -> launch(new DivergentFist(player));
             case BLACK_FLASH -> launch(new BlackFlash(player));
             case CRUSHING_BLOW -> launch(new CrushingBlow(player));
@@ -285,7 +335,7 @@ public class GojoMod implements ModInitializer {
 
         if (fired) {
             int cd = ability.cooldownTicks();
-            if (ability != Ability.R_SPECIAL && Ultimate.isGojoAwakened(player)) {
+            if (ability != Ability.R_SPECIAL && !ability.isGojoUltimateMove() && Ultimate.isGojoAwakened(player)) {
                 cd = Math.max(1, Math.round(cd * GojoConfig.get().awakenedCooldownMult));
             }
             s.startCooldown(ability, now, cd);

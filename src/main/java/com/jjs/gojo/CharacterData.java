@@ -20,6 +20,7 @@ public class CharacterData extends PersistentState {
     private final Map<UUID, Long> rctReady = new HashMap<>();
     private final Map<UUID, Float> meters = new HashMap<>();
     private final Map<UUID, Integer> heroes = new HashMap<>();
+    private final Map<UUID, Long> exhausted = new HashMap<>();
 
     public static CharacterData get(MinecraftServer server) {
         return server.getOverworld().getPersistentStateManager()
@@ -37,6 +38,7 @@ public class CharacterData extends PersistentState {
                 if (p.contains("rctReady")) d.rctReady.put(id, p.getLong("rctReady"));
                 if (p.contains("meter")) d.meters.put(id, p.getFloat("meter"));
                 if (p.contains("hero")) d.heroes.put(id, p.getInt("hero"));
+                if (p.contains("exhaustedUntil")) d.exhausted.put(id, p.getLong("exhaustedUntil"));
             } catch (IllegalArgumentException ignored) {
                 // skip malformed entries
             }
@@ -51,12 +53,14 @@ public class CharacterData extends PersistentState {
         ids.addAll(rctReady.keySet());
         ids.addAll(meters.keySet());
         ids.addAll(heroes.keySet());
+        ids.addAll(exhausted.keySet());
         for (UUID id : ids) {
             NbtCompound p = new NbtCompound();
             p.putInt("type", types.getOrDefault(id, Characters.NONE));
             if (rctReady.containsKey(id)) p.putLong("rctReady", rctReady.get(id));
             if (meters.containsKey(id)) p.putFloat("meter", meters.get(id));
             if (heroes.containsKey(id)) p.putInt("hero", heroes.get(id));
+            if (exhausted.containsKey(id)) p.putLong("exhaustedUntil", exhausted.get(id));
             players.put(id.toString(), p);
         }
         nbt.put("players", players);
@@ -97,6 +101,16 @@ public class CharacterData extends PersistentState {
     /** Selected sorcerer character (see {@link Heroes}); 0 = not chosen yet. */
     public int hero(UUID id) {
         return heroes.getOrDefault(id, 0);
+    }
+
+    /** Overworld game time at which exhaustion ends (0 = not exhausted). */
+    public long exhaustedUntil(UUID id) {
+        return exhausted.getOrDefault(id, 0L);
+    }
+
+    public void setExhaustedUntil(UUID id, long worldTime) {
+        exhausted.put(id, worldTime);
+        markDirty();
     }
 
     public void setHero(UUID id, int hero) {

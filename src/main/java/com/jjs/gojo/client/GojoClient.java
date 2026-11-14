@@ -77,7 +77,24 @@ public class GojoClient implements ClientModInitializer {
             client.execute(() -> ClientState.setCooldown(id, remaining, total));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.EXHAUST, (client, handler, buf, responseSender) -> {
+            int remaining = buf.readInt();
+            int total = buf.readInt();
+            client.execute(() -> ClientState.setExhaust(remaining, total));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.PASSIVE, (client, handler, buf, responseSender) -> {
+            boolean active = buf.readBoolean();
+            int range = buf.readInt();
+            client.execute(() -> {
+                ClientState.sixEyes = active;
+                ClientState.sixEyesRange = range;
+                if (!active) SixEyesClient.clear();
+            });
+        });
+
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            SixEyesClient.clear();
             ClientState.reset();
             lastBlockSent = false;
             touchBlock = false;
@@ -92,6 +109,8 @@ public class GojoClient implements ClientModInitializer {
         clientTick++;
         ClientState.tick++;
         ClientState.animate();
+
+        SixEyesClient.tick(mc);
 
         if (mc.player == null) {
             prevDown[0] = prevDown[1] = prevDown[2] = prevDown[3] = false;
@@ -191,6 +210,7 @@ public class GojoClient implements ClientModInitializer {
     public static void sendAbility(Ability a, int dir) {
         // Display-side gate only; the server enforces the real restriction.
         if (ClientState.type != 2 || ClientState.hero == 0) return;
+        if (ClientState.exhausted()) return; // exhausted: the server rejects it too
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         buf.writeByte(a.id);
         buf.writeByte(dir);
@@ -198,7 +218,7 @@ public class GojoClient implements ClientModInitializer {
     }
 
     private static void sendBlock(boolean wantsBlock) {
-        boolean blocking = wantsBlock && ClientState.type == 2;
+        boolean blocking = wantsBlock && ClientState.type == 2 && !ClientState.exhausted();
         if (blocking == lastBlockSent) return;
         lastBlockSent = blocking;
         if (!ClientPlayNetworking.canSend(GojoNet.BLOCK)) return;

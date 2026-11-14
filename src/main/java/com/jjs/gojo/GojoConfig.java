@@ -97,6 +97,26 @@ public class GojoConfig {
     public float pressureDamagePerPulse = 4.0f;
     public double pressureRadius = 11.0;
 
+    // Gojo ultimate moves. Fixed by design (not configurable): Maximum Blue = 2 dmg/s for 10 s,
+    // Hollow Nuke = 50 dmg to targets / 10 dmg to Gojo, domain stun = 15 s.
+    public int maxBlueCooldownTicks = 400;
+    public double maxBlueRadius = 20.0;
+    public double maxBluePullStrength = 0.9;
+    public int maxRedCooldownTicks = 300;
+    public float maxRedDamage = 25.0f;
+    public double maxRedRadius = 8.0;
+    public float maxRedComboFlashDamage = 20.0f;
+    public int hollowNukeCooldownTicks = 1200;
+    public double hollowNukeRadius = 14.0;
+    public int domainCooldownTicks = 1200;
+    public double domainRadius = 20.0;
+
+    // Exhaustion after Hollow Nuke / 0.2 Domain (default 20 s)
+    public int exhaustionTicks = 400;
+
+    // Six Eyes passive (Gojo only)
+    public int sixEyesRange = 32;
+
     public int maxGuard = 100;
     public double guardCostPerDamage = 4.0;
     public int guardBreakTicks = 60;

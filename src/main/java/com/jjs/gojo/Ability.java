@@ -18,12 +18,22 @@ public enum Ability {
     CLEAVE(12),
     DISMANTLE(13),
     FLAME_ARROW(14),
-    MALEVOLENT_PRESSURE(15);
+    MALEVOLENT_PRESSURE(15),
+    // Gojo's Limitless Awakened moves (replace his four normal moves while transformed)
+    MAXIMUM_BLUE(16),
+    MAXIMUM_RED(17),
+    HOLLOW_NUKE(18),
+    DOMAIN(19);
 
     public final int id;
 
     Ability(int id) {
         this.id = id;
+    }
+
+    /** True for the four moves that replace Gojo's normal moves during Limitless Awakened. */
+    public boolean isGojoUltimateMove() {
+        return this == MAXIMUM_BLUE || this == MAXIMUM_RED || this == HOLLOW_NUKE || this == DOMAIN;
     }
 
     public static Ability fromId(int id) {
@@ -52,6 +62,10 @@ public enum Ability {
             case DISMANTLE -> c.dismantleCooldownTicks;
             case FLAME_ARROW -> c.flameArrowCooldownTicks;
             case MALEVOLENT_PRESSURE -> c.pressureCooldownTicks;
+            case MAXIMUM_BLUE -> c.maxBlueCooldownTicks;
+            case MAXIMUM_RED -> c.maxRedCooldownTicks;
+            case HOLLOW_NUKE -> c.hollowNukeCooldownTicks;
+            case DOMAIN -> c.domainCooldownTicks;
         };
     }
 }
