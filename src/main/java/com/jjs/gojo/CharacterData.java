@@ -21,6 +21,8 @@ public class CharacterData extends PersistentState {
     private final Map<UUID, Float> meters = new HashMap<>();
     private final Map<UUID, Integer> heroes = new HashMap<>();
     private final Map<UUID, Long> exhausted = new HashMap<>();
+    private final Map<UUID, Long> cursedUntil = new HashMap<>();
+    private final Map<UUID, Long> cursedReady = new HashMap<>();
 
     public static CharacterData get(MinecraftServer server) {
         return server.getOverworld().getPersistentStateManager()
@@ -39,6 +41,8 @@ public class CharacterData extends PersistentState {
                 if (p.contains("meter")) d.meters.put(id, p.getFloat("meter"));
                 if (p.contains("hero")) d.heroes.put(id, p.getInt("hero"));
                 if (p.contains("exhaustedUntil")) d.exhausted.put(id, p.getLong("exhaustedUntil"));
+                if (p.contains("cursedUntil")) d.cursedUntil.put(id, p.getLong("cursedUntil"));
+                if (p.contains("cursedReady")) d.cursedReady.put(id, p.getLong("cursedReady"));
             } catch (IllegalArgumentException ignored) {
                 // skip malformed entries
             }
@@ -54,6 +58,8 @@ public class CharacterData extends PersistentState {
         ids.addAll(meters.keySet());
         ids.addAll(heroes.keySet());
         ids.addAll(exhausted.keySet());
+        ids.addAll(cursedUntil.keySet());
+        ids.addAll(cursedReady.keySet());
         for (UUID id : ids) {
             NbtCompound p = new NbtCompound();
             p.putInt("type", types.getOrDefault(id, Characters.NONE));
@@ -61,6 +67,8 @@ public class CharacterData extends PersistentState {
             if (meters.containsKey(id)) p.putFloat("meter", meters.get(id));
             if (heroes.containsKey(id)) p.putInt("hero", heroes.get(id));
             if (exhausted.containsKey(id)) p.putLong("exhaustedUntil", exhausted.get(id));
+            if (cursedUntil.containsKey(id)) p.putLong("cursedUntil", cursedUntil.get(id));
+            if (cursedReady.containsKey(id)) p.putLong("cursedReady", cursedReady.get(id));
             players.put(id.toString(), p);
         }
         nbt.put("players", players);
@@ -110,6 +118,21 @@ public class CharacterData extends PersistentState {
 
     public void setExhaustedUntil(UUID id, long worldTime) {
         exhausted.put(id, worldTime);
+        markDirty();
+    }
+
+    /** Overworld game time at which Yuji's Cursed Energy ends / may be used again. */
+    public long cursedUntil(UUID id) {
+        return cursedUntil.getOrDefault(id, 0L);
+    }
+
+    public long cursedReadyAt(UUID id) {
+        return cursedReady.getOrDefault(id, 0L);
+    }
+
+    public void setCursed(UUID id, long until, long readyAt) {
+        cursedUntil.put(id, until);
+        cursedReady.put(id, readyAt);
         markDirty();
     }
 

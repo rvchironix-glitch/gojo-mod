@@ -83,6 +83,13 @@ public class GojoClient implements ClientModInitializer {
             client.execute(() -> ClientState.setExhaust(remaining, total));
         });
 
+        ClientPlayNetworking.registerGlobalReceiver(GojoNet.STATUS, (client, handler, buf, responseSender) -> {
+            int kind = buf.readByte();
+            int a = buf.readInt();
+            int b = buf.readInt();
+            client.execute(() -> ClientState.setStatus(kind, a, b));
+        });
+
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.PASSIVE, (client, handler, buf, responseSender) -> {
             boolean active = buf.readBoolean();
             int range = buf.readInt();

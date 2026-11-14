@@ -18,6 +18,8 @@ public class YujiStrikes implements ServerEffect {
     private final ServerWorld world;
     private final UUID ownerId;
     private int age;
+    /** Cursed Energy: at most ONE Black Flash per Rapid Strikes use. */
+    private boolean flashed;
 
     public YujiStrikes(ServerPlayerEntity owner) {
         this.world = owner.getServerWorld();
@@ -51,8 +53,15 @@ public class YujiStrikes implements ServerEffect {
                     SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE, SoundCategory.PLAYERS, 0.8f, 1.3f);
             return;
         }
+        boolean flashThisStrike = !flashed && com.jjs.gojo.CursedEnergy.active(owner) && com.jjs.gojo.CursedEnergy.roll(owner);
+        if (flashThisStrike) flashed = true; // the single allowed Black Flash is spent, even if it hits only one target
+        boolean first = true;
         for (LivingEntity t : targets) {
-            CombatUtil.damage(owner, t, last ? c.strikeFinisherDamage : c.strikeDamage, true);
+            boolean flash = flashThisStrike && first; // 1.5x only for the Black Flash hit itself
+            first = false;
+            CombatUtil.damage(owner, t, (last ? c.strikeFinisherDamage : c.strikeDamage)
+                    * (flash ? com.jjs.gojo.CursedEnergy.FLASH_MULT : 1.0f), true);
+            if (flash) com.jjs.gojo.CursedEnergy.flashEffects(owner, t);
             Vec3d at = t.getPos().add(0, t.getHeight() * 0.6, 0);
             world.spawnParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 5, 0.25, 0.25, 0.25, 0.2);
             world.spawnParticles(Fx.ORANGE, at.x, at.y, at.z, 6, 0.25, 0.25, 0.25, 0);

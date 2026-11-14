@@ -15,6 +15,11 @@ public final class ClientState {
     public static int tick;
     private static int awakenedEnd;
     private static int awakenedTotal = 2400;
+    // Stage 6 timers (ticks on the client clock)
+    private static int cursedEnd;
+    private static int cursedReadyEnd;
+    private static int prepEnd;
+    private static int prepTotal = 100;
     private static int exhaustEnd;
     private static int exhaustTotal = 400;
     /** Six Eyes passive (Gojo only) as told by the server. */
@@ -35,6 +40,9 @@ public final class ClientState {
         shownMeter = 0f;
         awakenedEnd = 0;
         exhaustEnd = 0;
+        cursedEnd = 0;
+        cursedReadyEnd = 0;
+        prepEnd = 0;
         sixEyes = false;
         for (int i = 0; i < N; i++) {
             cdEnd[i] = 0;
@@ -48,6 +56,33 @@ public final class ClientState {
         awakenedTotal = Math.max(1, totalTicks);
         ClientState.meter = meter;
         awakenedEnd = awakenedRemainingTicks > 0 ? tick + awakenedRemainingTicks : 0;
+    }
+
+    /** kind 0: Cursed Energy (a = effect ticks left, b = cooldown ticks left after it ends). kind 1: World Slash prep. */
+    public static void setStatus(int kind, int a, int b) {
+        if (kind == 0) {
+            cursedEnd = a > 0 ? tick + a : 0;
+            cursedReadyEnd = tick + a + Math.max(0, b);
+        } else if (kind == 1) {
+            prepEnd = a > 0 ? tick + a : 0;
+            prepTotal = Math.max(1, b);
+        }
+    }
+
+    public static int cursedRemaining() {
+        return Math.max(0, cursedEnd - tick);
+    }
+
+    public static int cursedCooldownRemaining() {
+        return cursedRemaining() > 0 ? 0 : Math.max(0, cursedReadyEnd - tick);
+    }
+
+    public static int prepRemaining() {
+        return Math.max(0, prepEnd - tick);
+    }
+
+    public static int prepTotal() {
+        return prepTotal;
     }
 
     public static void setExhaust(int remaining, int total) {

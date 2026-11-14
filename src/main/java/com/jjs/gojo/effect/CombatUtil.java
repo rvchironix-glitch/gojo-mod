@@ -22,7 +22,13 @@ public final class CombatUtil {
     public static boolean damage(ServerPlayerEntity owner, LivingEntity target, float amount, boolean ignoreIframes) {
         if (target == owner || !target.isAlive()) return false;
         if (ignoreIframes) target.timeUntilRegen = 0;
-        return target.damage(owner.getDamageSources().playerAttack(owner), amount * Ultimate.damageMult(owner));
+        // Marks this as an ability hit so Cursed Energy's M1 Black Flash never applies to it.
+        GojoMod.inAbility = true;
+        try {
+            return target.damage(owner.getDamageSources().playerAttack(owner), amount * Ultimate.damageMult(owner));
+        } finally {
+            GojoMod.inAbility = false;
+        }
     }
 
     /**

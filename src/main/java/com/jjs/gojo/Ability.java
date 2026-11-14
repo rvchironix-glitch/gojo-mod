@@ -18,12 +18,15 @@ public enum Ability {
     CLEAVE(12),
     DISMANTLE(13),
     FLAME_ARROW(14),
-    MALEVOLENT_PRESSURE(15),
+    MALEVOLENT_SHRINE(15), // replaced Malevolent Pressure in Stage 6
     // Gojo's Limitless Awakened moves (replace his four normal moves while transformed)
     MAXIMUM_BLUE(16),
     MAXIMUM_RED(17),
     HOLLOW_NUKE(18),
-    DOMAIN(19);
+    DOMAIN(19),
+    // Stage 6 R specials (both reached through the R key / R_SPECIAL slot, resolved per character)
+    CURSED_ENERGY(20),
+    WORLD_CUTTING_SLASH(21);
 
     public final int id;
 
@@ -61,11 +64,13 @@ public enum Ability {
             case CLEAVE -> c.cleaveCooldownTicks;
             case DISMANTLE -> c.dismantleCooldownTicks;
             case FLAME_ARROW -> c.flameArrowCooldownTicks;
-            case MALEVOLENT_PRESSURE -> c.pressureCooldownTicks;
+            case MALEVOLENT_SHRINE -> c.shrineCooldownTicks;
             case MAXIMUM_BLUE -> c.maxBlueCooldownTicks;
             case MAXIMUM_RED -> c.maxRedCooldownTicks;
             case HOLLOW_NUKE -> c.hollowNukeCooldownTicks;
             case DOMAIN -> c.domainCooldownTicks;
+            case CURSED_ENERGY -> CursedEnergy.COOLDOWN_TICKS;
+            case WORLD_CUTTING_SLASH -> c.worldSlashCooldownTicks;
         };
     }
 }

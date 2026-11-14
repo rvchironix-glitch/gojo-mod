@@ -11,7 +11,8 @@ import com.jjs.gojo.effect.CrushingBlow;
 import com.jjs.gojo.effect.Dismantle;
 import com.jjs.gojo.effect.DivergentFist;
 import com.jjs.gojo.effect.FlameArrow;
-import com.jjs.gojo.effect.MalevolentPressure;
+import com.jjs.gojo.effect.MalevolentShrine;
+import com.jjs.gojo.effect.WorldCuttingSlash;
 import com.jjs.gojo.effect.ServerEffect;
 import com.jjs.gojo.effect.SukunaCleave;
 import com.jjs.gojo.effect.YujiStrikes;
@@ -54,6 +55,9 @@ public class GojoMod implements ModInitializer {
 
     /** Set only for the duration of one fixed-damage call (CombatUtil.damageExact): blocking and charging are skipped. */
     public static boolean bypassGuard;
+
+    /** True while one of the mod's abilities (or a replaced Black Flash hit) is dealing damage: not a plain M1. */
+    public static boolean inAbility;
 
     private static final Map<UUID, PlayerState> STATES = new ConcurrentHashMap<>();
 
@@ -128,6 +132,7 @@ public class GojoMod implements ModInitializer {
             Stun.tick(server);
             Exhaustion.tick(server);
             SixEyes.tick(server);
+            CursedEnergy.tick(server);
         });
         // Defeating an enemy grants extra ultimate charge.
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
@@ -150,6 +155,8 @@ public class GojoMod implements ModInitializer {
             MaximumRed.clearAll();
             HollowNuke.clearAll();
             DomainExpansion.clearAll();
+            MalevolentShrine.clearAll();
+            WorldCuttingSlash.clearAll();
             STATES.clear();
         });
 
@@ -171,6 +178,8 @@ public class GojoMod implements ModInitializer {
 
     private static boolean allowDamage(LivingEntity entity, DamageSource source, float amount) {
         boolean allowed = allowDamageInner(entity, source, amount);
+        // Yuji's Cursed Energy: a normal M1 may turn into a Black Flash (never ability damage).
+        if (allowed && !bypassGuard && !inAbility && CursedEnergy.tryM1(entity, source, amount)) return false;
         if (allowed && !bypassGuard && amount > 0f && !source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             chargeFromDamage(entity, source, amount);
         }
@@ -329,7 +338,12 @@ public class GojoMod implements ModInitializer {
             case CLEAVE -> launch(new SukunaCleave(player));
             case DISMANTLE -> launch(new Dismantle(player));
             case FLAME_ARROW -> launch(new FlameArrow(player));
-            case MALEVOLENT_PRESSURE -> launch(new MalevolentPressure(player));
+            case MALEVOLENT_SHRINE -> MalevolentShrine.start(player);
+            case WORLD_CUTTING_SLASH -> Ultimate.isSukuna(player) && WorldCuttingSlash.start(player);
+            case CURSED_ENERGY -> {
+                CursedEnergy.activate(player); // has its own persistent timer, so no generic cooldown here
+                yield false;
+            }
             default -> false;
         };
 

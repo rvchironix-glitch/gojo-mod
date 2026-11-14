@@ -93,9 +93,18 @@ public class GojoConfig {
     public float dismantleDamage = 12.0f;
     public int flameArrowCooldownTicks = 240;
     public float flameArrowDamage = 26.0f;
-    public int pressureCooldownTicks = 400;
-    public float pressureDamagePerPulse = 7.0f;
-    public double pressureRadius = 11.0;
+
+    // Malevolent Shrine (Sukuna's domain, replaced Malevolent Pressure)
+    public int shrineCooldownTicks = 1200;
+    public int shrineDurationTicks = 160;      // 8 s after the cast
+    public double shrineRadius = 18.0;
+    public int shrineIntervalTicks = 10;       // damage tick: once per target per interval
+    public float shrineDamage = 5.0f;
+
+    // World Cutting Slash (Sukuna R). The 5 s chant is fixed.
+    public int worldSlashCooldownTicks = 900;
+    public float worldSlashDamage = 60.0f;
+    public double worldSlashRange = 60.0;
 
     // Gojo ultimate moves. Fixed by design (not configurable): Maximum Blue = 2 dmg/s for 10 s,
     // Hollow Nuke = 50 dmg to targets / 10 dmg to Gojo, domain stun = 15 s.
@@ -143,7 +152,6 @@ public class GojoConfig {
                         loaded.cleaveDamage = d.cleaveDamage;
                         loaded.dismantleDamage = d.dismantleDamage;
                         loaded.flameArrowDamage = d.flameArrowDamage;
-                        loaded.pressureDamagePerPulse = d.pressureDamagePerPulse;
                         loaded.configVersion = 1;
                     }
                 }

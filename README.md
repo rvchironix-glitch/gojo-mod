@@ -38,7 +38,7 @@ Move keys 1-4 (Z, X, H, N) map to the current character's moves:
 | Z | Lapis Blue | Divergent Fist | Cleave |
 | X | Reversal Red | Black Flash | Dismantle |
 | H | Rapid Punches | Crushing Blow | Flame Arrow |
-| N | Twofold Kick | Rapid Strikes | Malevolent Pressure |
+| N | Twofold Kick | Rapid Strikes | Malevolent Shrine |
 
 Sukuna is a 60 s transformation, never a selectable character. The player skin is not replaced;
 Sukuna is shown with markings, extra eyes, aura, outline and title.
@@ -60,6 +60,18 @@ Six Eyes (Gojo only): permanent Night Vision (one effect, topped up every second
 nearby living things (`sixEyesRange`), drawn only on Gojo's own screen.
 New config keys: maxBlue*, maxRed*, hollowNukeCooldownTicks/Radius, domainCooldownTicks/Radius, exhaustionTicks, sixEyesRange.
 
+## Stage 6: R specials and Malevolent Shrine
+R is resolved on the server per character: Gojo = Hollow Purple (awakened only), Yuji = Cursed Energy, Sukuna (Yuji transformed) = World Cutting Slash. Ids from another character are rejected.
+
+| Move | Details |
+|---|---|
+| Yuji: Cursed Energy (R) | 30 s of cursed energy around both hands, then a 10 s cooldown counted from the end. Stored in the world save, so death, relog and restarts neither end it nor reset the cooldown. Each normal M1 melee hit rolls an independent 20%: success = Black Flash at 1.5x that hit's damage, black/red effects, sound, knockback; the original hit is cancelled so the target is hurt once. Never applies to Divergent Fist, Black Flash, Crushing Blow or other abilities. |
+| Yuji: Rapid Strikes | The only ability that benefits: each use can Black Flash at most ONCE (independent 20% roll per strike until one lands; 1.5x on that hit only); zero is possible. |
+| Sukuna: World Cutting Slash (R) | 5 s (100 tick) preparation, chant in everyone's chat ("Dragon Scales..." at 0 s, "Repulsion..." at 1.75 s, "Twin Meteors..." at 3.5 s), then a wide crescent flies 60 blocks forward dealing 60 damage once per target. Cooldown 45 s from activation. Cannot be restarted while preparing. Cancelled safely if Sukuna dies, leaves, changes dimension or the transformation ends. No block damage. |
+| Sukuna: Malevolent Shrine (N) | Replaces Malevolent Pressure completely. 1.5 s cast, then an 8 s domain, radius 18: 5 damage per target every 0.5 s (10/s), one hit per target per interval. Cooldown 60 s. No block damage. Ends if Sukuna dies, leaves, changes dimension or loses the transformation. |
+Config keys: shrineCooldownTicks, shrineDurationTicks, shrineRadius, shrineIntervalTicks, shrineDamage, worldSlashCooldownTicks, worldSlashDamage, worldSlashRange. Cursed Energy numbers (30 s, 10 s, 20%, 1.5x) are fixed.
+The HUD and Ability Pad show Cursed Energy's duration then cooldown, World Slash's 5 s prep countdown and cooldown, and the Shrine.
+
 ## Stage 5E: Sukuna damage (final values, `config/gojomoveset.json`)
 | Move | Before | Now |
 |---|---|---|
@@ -79,4 +91,4 @@ Timings are unchanged: Gojo Limitless Awakened 120 s, Sukuna 60 s, and the meter
   ability. Block toggles on/off. Auto-detection of mobile launchers is best-effort; override it in Customize Controls.
 
 ## Status
-Stages 5A to 5E written. Not compiled or played by the author; see the delivery notes for known limits.
+Stages 5A to 6 written. Not compiled or played by the author; see the delivery notes for known limits.

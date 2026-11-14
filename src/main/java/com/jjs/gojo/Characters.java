@@ -111,5 +111,7 @@ public final class Characters {
         SixEyes.refresh(p);
         SixEyes.sync(p);
         Exhaustion.onJoin(p);
+        CursedEnergy.sync(p);
+        WorldCuttingSlash.sync(p);
     }
 }

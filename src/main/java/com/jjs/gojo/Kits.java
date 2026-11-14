@@ -19,7 +19,11 @@ public final class Kits {
             case ULTIMATE:
                 return requested;
             case R_SPECIAL:
-                return hero == Heroes.GOJO ? Ability.R_SPECIAL : null;
+                // R means a different move per character: Gojo = Hollow Purple, Yuji = Cursed Energy,
+                // Sukuna (Yuji transformed) = World Cutting Slash. Never crosses characters.
+                if (hero == Heroes.GOJO) return Ability.R_SPECIAL;
+                if (hero == Heroes.YUJI) return transformed ? Ability.WORLD_CUTTING_SLASH : Ability.CURSED_ENERGY;
+                return null;
             case LAPIS_BLUE:
                 return slot(hero, transformed, Ability.LAPIS_BLUE, Ability.MAXIMUM_BLUE, Ability.DIVERGENT_FIST, Ability.CLEAVE);
             case REVERSAL_RED:
@@ -27,7 +31,7 @@ public final class Kits {
             case RAPID_PUNCHES:
                 return slot(hero, transformed, Ability.RAPID_PUNCHES, Ability.HOLLOW_NUKE, Ability.CRUSHING_BLOW, Ability.FLAME_ARROW);
             case TWOFOLD_KICK:
-                return slot(hero, transformed, Ability.TWOFOLD_KICK, Ability.DOMAIN, Ability.RAPID_STRIKES, Ability.MALEVOLENT_PRESSURE);
+                return slot(hero, transformed, Ability.TWOFOLD_KICK, Ability.DOMAIN, Ability.RAPID_STRIKES, Ability.MALEVOLENT_SHRINE);
             default:
                 return null; // character-specific ids are never accepted directly from a client
         }

@@ -21,6 +21,12 @@ public final class GojoNet {
     public static final Identifier EXHAUST = new Identifier(GojoMod.MOD_ID, "exhaust");
     /** S2C: boolean sixEyesActive, int range */
     public static final Identifier PASSIVE = new Identifier(GojoMod.MOD_ID, "passive");
+    /**
+     * S2C status timers. byte kind, int a, int b.
+     * kind 0 = Yuji Cursed Energy: a = ticks of effect left, b = ticks of cooldown left once the effect ends.
+     * kind 1 = World Cutting Slash preparation: a = ticks left until release (0 = not preparing).
+     */
+    public static final Identifier STATUS = new Identifier(GojoMod.MOD_ID, "status");
     /** S2C: byte abilityId, int remainingTicks, int totalTicks */
     public static final Identifier COOLDOWN = new Identifier(GojoMod.MOD_ID, "cooldown");
 }

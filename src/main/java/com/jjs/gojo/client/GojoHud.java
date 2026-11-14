@@ -32,7 +32,8 @@ public final class GojoHud {
                     new Entry("CLEAVE", Ability.CLEAVE, "CL", "Cleave", 0xFFFF3A3A, GojoClient.BLUE),
                     new Entry("DISMANTLE", Ability.DISMANTLE, "DS", "Dismantle", 0xFFFF7A7A, GojoClient.RED),
                     new Entry("FLAME_ARROW", Ability.FLAME_ARROW, "FA", "Flame", 0xFFFFA83A, GojoClient.PUNCHES),
-                    new Entry("MALEVOLENT_PRESSURE", Ability.MALEVOLENT_PRESSURE, "MP", "Pressure", 0xFFB04AFF, GojoClient.KICK),
+                    new Entry("MALEVOLENT_SHRINE", Ability.MALEVOLENT_SHRINE, "MS", "Shrine", 0xFFB04AFF, GojoClient.KICK),
+                    new Entry("WORLD_CUTTING_SLASH", Ability.WORLD_CUTTING_SLASH, "WS", "World Slash", 0xFFFF2A2A, GojoClient.SPECIAL),
                     rct, dash, ult};
         }
         if (ClientState.hero == 2) { // Yuji
@@ -41,6 +42,7 @@ public final class GojoHud {
                     new Entry("BLACK_FLASH", Ability.BLACK_FLASH, "BF", "Black Flash", 0xFFB04AFF, GojoClient.RED),
                     new Entry("CRUSHING_BLOW", Ability.CRUSHING_BLOW, "CB", "Crushing", 0xFFFFD83A, GojoClient.PUNCHES),
                     new Entry("RAPID_STRIKES", Ability.RAPID_STRIKES, "RS", "Strikes", 0xFFFF6A3A, GojoClient.KICK),
+                    new Entry("CURSED_ENERGY", Ability.CURSED_ENERGY, "CE", "Cursed", 0xFF8A3AFF, GojoClient.SPECIAL),
                     rct, dash, ult};
         }
         if (ClientState.gojoAwakened()) { // Gojo, Limitless Awakened: the four moves are replaced
@@ -187,6 +189,19 @@ public final class GojoHud {
         boolean locked = ab == Ability.R_SPECIAL && !ClientState.awakened();
         boolean burnout = ClientState.exhausted() && ab != Ability.RCT; // RCT stays usable during burnout
         int remaining = (block || ultimate) ? 0 : ClientState.remaining(ab.id);
+        int cdTotal = (block || ultimate) ? 1 : ClientState.total(ab.id);
+        // Stage 6 timers: Cursed Energy shows its 30 s duration then a 10 s cooldown; World Slash shows its 5 s prep.
+        int timer = 0;
+        int timerTotal = 1;
+        if (ab == Ability.CURSED_ENERGY) {
+            timer = ClientState.cursedRemaining();
+            timerTotal = 600;
+            remaining = ClientState.cursedCooldownRemaining();
+            cdTotal = 200;
+        } else if (ab == Ability.WORLD_CUTTING_SLASH && ClientState.prepRemaining() > 0) {
+            timer = ClientState.prepRemaining();
+            timerTotal = ClientState.prepTotal();
+        }
 
         boolean active;
         boolean ready;
@@ -197,8 +212,8 @@ public final class GojoHud {
             active = ClientState.awakened();
             ready = ClientState.meter >= 100f && !active && !burnout;
         } else {
-            active = false;
-            ready = !locked && remaining <= 0 && !burnout;
+            active = timer > 0;
+            ready = !locked && remaining <= 0 && !burnout && !active;
         }
 
         float gs = size / 24f * 1.3f;
@@ -214,7 +229,11 @@ public final class GojoHud {
         ctx.drawCenteredTextWithShadow(tr, e.glyph(), 0, 0, withAlpha(col, alpha));
         ms.pop();
 
-        if (ultimate && active) {
+        if (timer > 0) {
+            int h = (int) ((size - 2) * (1f - timer / (float) timerTotal));
+            ctx.fill(x + 1, y + 1, x + size - 1, y + 1 + h, withAlpha(0xB0000000, alpha));
+            drawSmall(ctx, tr, ((timer + 19) / 20) + "s", x + size / 2, y + size - 8, withAlpha(0xFFFFD83A, alpha), size);
+        } else if (ultimate && active) {
             int secs = (ClientState.awakenedRemaining() + 19) / 20;
             float frac = ClientState.awakenedRemaining() / (float) ClientState.awakenedTotal();
             int h = (int) ((size - 2) * (1f - frac));
@@ -223,7 +242,7 @@ public final class GojoHud {
         } else if (locked) {
             ctx.fill(x + 1, y + 1, x + size - 1, y + size - 1, withAlpha(0x90000000, alpha));
         } else if (remaining > 0) {
-            float frac = Math.min(1f, remaining / (float) ClientState.total(ab.id));
+            float frac = Math.min(1f, remaining / (float) cdTotal);
             int h = (int) ((size - 2) * frac);
             ctx.fill(x + 1, y + 1, x + size - 1, y + 1 + h, withAlpha(0xB0000000, alpha));
             drawSmall(ctx, tr, String.format("%.1f", remaining / 20f), x + size / 2, y + size - 8,
