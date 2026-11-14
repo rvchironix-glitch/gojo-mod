@@ -1,5 +1,6 @@
 package com.jjs.gojo;
 
+import com.jjs.gojo.effect.WorldCuttingSlash;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
