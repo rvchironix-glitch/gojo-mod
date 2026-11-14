@@ -8,7 +8,17 @@ public enum Ability {
     TWOFOLD_KICK(4),
     R_SPECIAL(5),
     RCT(6),
-    ULTIMATE(7);
+    ULTIMATE(7),
+    // Yuji
+    DIVERGENT_FIST(8),
+    BLACK_FLASH(9),
+    CRUSHING_BLOW(10),
+    RAPID_STRIKES(11),
+    // Sukuna (Yuji's transformation)
+    CLEAVE(12),
+    DISMANTLE(13),
+    FLAME_ARROW(14),
+    MALEVOLENT_PRESSURE(15);
 
     public final int id;
 
@@ -34,6 +44,14 @@ public enum Ability {
             case R_SPECIAL -> c.specialCooldownTicks;
             case RCT -> c.rctCooldownTicks;
             case ULTIMATE -> 0;
+            case DIVERGENT_FIST -> c.divergentCooldownTicks;
+            case BLACK_FLASH -> c.blackFlashCooldownTicks;
+            case CRUSHING_BLOW -> c.crushingCooldownTicks;
+            case RAPID_STRIKES -> c.strikesCooldownTicks;
+            case CLEAVE -> c.cleaveCooldownTicks;
+            case DISMANTLE -> c.dismantleCooldownTicks;
+            case FLAME_ARROW -> c.flameArrowCooldownTicks;
+            case MALEVOLENT_PRESSURE -> c.pressureCooldownTicks;
         };
     }
 }

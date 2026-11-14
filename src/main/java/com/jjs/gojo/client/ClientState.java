@@ -1,18 +1,20 @@
 package com.jjs.gojo.client;
 
 import com.jjs.gojo.Ability;
-import com.jjs.gojo.Ultimate;
 
 /** Client-side mirror of server state (character type, cooldowns, ultimate). Display only; the server decides. */
 public final class ClientState {
     public static boolean synced;
     public static int type;
-    public static int hero = 1;
+    /** 0 = not chosen yet (or not synced). */
+    public static int hero;
+    public static boolean heroSynced;
     public static float meter;
     /** Smoothly animated copy of {@link #meter} for rendering. */
     public static float shownMeter;
     public static int tick;
     private static int awakenedEnd;
+    private static int awakenedTotal = 2400;
     private static final int N = Ability.values().length;
     private static final int[] cdEnd = new int[N];
     private static final int[] cdTotal = new int[N];
@@ -22,7 +24,8 @@ public final class ClientState {
     public static void reset() {
         synced = false;
         type = 0;
-        hero = 1;
+        hero = 0;
+        heroSynced = false;
         meter = 0f;
         shownMeter = 0f;
         awakenedEnd = 0;
@@ -32,8 +35,10 @@ public final class ClientState {
         }
     }
 
-    public static void setUltimate(int hero, float meter, int awakenedRemainingTicks) {
+    public static void setUltimate(int hero, float meter, int awakenedRemainingTicks, int totalTicks) {
         ClientState.hero = hero;
+        ClientState.heroSynced = true;
+        awakenedTotal = Math.max(1, totalTicks);
         ClientState.meter = meter;
         awakenedEnd = awakenedRemainingTicks > 0 ? tick + awakenedRemainingTicks : 0;
     }
@@ -47,7 +52,7 @@ public final class ClientState {
     }
 
     public static int awakenedTotal() {
-        return Ultimate.AWAKENED_TICKS;
+        return awakenedTotal;
     }
 
     /** Called once per client tick. */

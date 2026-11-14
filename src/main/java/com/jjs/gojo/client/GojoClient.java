@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 public class GojoClient implements ClientModInitializer {
     private static final String CAT = "key.categories.gojomoveset";
 
-    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT, ULT;
+    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT, ULT, CHARACTER;
 
     // double-tap tracking: 0 fwd, 1 back, 2 left, 3 right
     private static final boolean[] prevDown = new boolean[4];
@@ -43,6 +43,7 @@ public class GojoClient implements ClientModInitializer {
         // Twofold Kick moved from V to N so the Ultimate can default to V.
         KICK = reg("key.gojomoveset.kick", GLFW.GLFW_KEY_N);
         ULT = reg("key.gojomoveset.ultimate", GLFW.GLFW_KEY_V);
+        CHARACTER = reg("key.gojomoveset.character", GLFW.GLFW_KEY_J);
         RCT = reg("key.gojomoveset.rct", GLFW.GLFW_KEY_C);
 
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.SYNC, (client, handler, buf, responseSender) -> {
@@ -60,7 +61,8 @@ public class GojoClient implements ClientModInitializer {
             int hero = buf.readByte();
             float meter = buf.readFloat();
             int remaining = buf.readInt();
-            client.execute(() -> ClientState.setUltimate(hero, meter, remaining));
+            int total = buf.readInt();
+            client.execute(() -> ClientState.setUltimate(hero, meter, remaining, total));
         });
 
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.COOLDOWN, (client, handler, buf, responseSender) -> {
@@ -94,6 +96,18 @@ public class GojoClient implements ClientModInitializer {
         // Server told us this player has not chosen yet: show the selection screen.
         if (ClientState.synced && ClientState.type == 0 && mc.currentScreen == null) {
             mc.setScreen(new CharacterSelectScreen());
+        }
+
+        // Sorcerer who has not picked Gojo/Yuji yet: show the character screen.
+        if (ClientState.synced && ClientState.heroSynced && ClientState.type == 2
+                && ClientState.hero == 0 && mc.currentScreen == null) {
+            mc.setScreen(new HeroSelectScreen());
+        }
+        while (CHARACTER.wasPressed()) {
+            if (ClientState.type == 2 && ClientState.heroSynced && !ClientState.awakened()
+                    && mc.currentScreen == null) {
+                mc.setScreen(new HeroSelectScreen());
+            }
         }
 
         if (mc.currentScreen != null) {
@@ -139,7 +153,7 @@ public class GojoClient implements ClientModInitializer {
 
     private static void sendAbility(Ability a, int dir) {
         // Display-side gate only; the server enforces the real restriction.
-        if (ClientState.type != 2) return;
+        if (ClientState.type != 2 || ClientState.hero == 0) return;
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         buf.writeByte(a.id);
         buf.writeByte(dir);

@@ -94,9 +94,9 @@ public class CharacterData extends PersistentState {
         markDirty();
     }
 
-    /** Selected sorcerer character (see {@link Heroes}); defaults to Gojo. */
+    /** Selected sorcerer character (see {@link Heroes}); 0 = not chosen yet. */
     public int hero(UUID id) {
-        return heroes.getOrDefault(id, Heroes.GOJO);
+        return heroes.getOrDefault(id, 0);
     }
 
     public void setHero(UUID id, int hero) {

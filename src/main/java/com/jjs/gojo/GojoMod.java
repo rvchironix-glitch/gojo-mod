@@ -1,6 +1,15 @@
 package com.jjs.gojo;
 
+import com.jjs.gojo.effect.BlackFlash;
 import com.jjs.gojo.effect.BlueOrb;
+import com.jjs.gojo.effect.CrushingBlow;
+import com.jjs.gojo.effect.Dismantle;
+import com.jjs.gojo.effect.DivergentFist;
+import com.jjs.gojo.effect.FlameArrow;
+import com.jjs.gojo.effect.MalevolentPressure;
+import com.jjs.gojo.effect.ServerEffect;
+import com.jjs.gojo.effect.SukunaCleave;
+import com.jjs.gojo.effect.YujiStrikes;
 import com.jjs.gojo.effect.BlueTrap;
 import com.jjs.gojo.effect.EffectManager;
 import com.jjs.gojo.effect.HollowPurple;
@@ -74,6 +83,11 @@ public class GojoMod implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(GojoNet.CHOOSE, (server, player, handler, buf, sender) -> {
             int wanted = buf.readByte();
             server.execute(() -> Characters.choose(server, player, wanted));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(GojoNet.HERO, (server, player, handler, buf, sender) -> {
+            int hero = buf.readByte();
+            server.execute(() -> Characters.chooseHero(server, player, hero));
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -210,6 +224,12 @@ public class GojoMod implements ModInitializer {
         // Server-side restriction: only Sorcerers may use any ability.
         if (!Characters.isSorcerer(player)) return;
 
+        // The client only sends move slots; the server decides what they mean for this character.
+        int hero = CharacterData.get(player.getServer()).hero(player.getUuid());
+        if (hero == 0) return; // must pick Gojo or Yuji first
+        ability = Kits.resolve(hero, Ultimate.isAwakened(player), ability);
+        if (ability == null) return;
+
         if (ability == Ability.RCT) {
             doRct(player);
             return;
@@ -224,7 +244,7 @@ public class GojoMod implements ModInitializer {
         long now = player.getServer().getTicks();
 
         // Hollow Purple is ultimate-only.
-        if (ability == Ability.R_SPECIAL && !Ultimate.isAwakened(player)) {
+        if (ability == Ability.R_SPECIAL && !Ultimate.isGojoAwakened(player)) {
             player.sendMessage(Text.literal("Hollow Purple requires Limitless Awakened"), true);
             return;
         }
@@ -252,17 +272,30 @@ public class GojoMod implements ModInitializer {
                 EffectManager.add(new HollowPurple(player));
                 yield true;
             }
+            case DIVERGENT_FIST -> launch(new DivergentFist(player));
+            case BLACK_FLASH -> launch(new BlackFlash(player));
+            case CRUSHING_BLOW -> launch(new CrushingBlow(player));
+            case RAPID_STRIKES -> launch(new YujiStrikes(player));
+            case CLEAVE -> launch(new SukunaCleave(player));
+            case DISMANTLE -> launch(new Dismantle(player));
+            case FLAME_ARROW -> launch(new FlameArrow(player));
+            case MALEVOLENT_PRESSURE -> launch(new MalevolentPressure(player));
             default -> false;
         };
 
         if (fired) {
             int cd = ability.cooldownTicks();
-            if (ability != Ability.R_SPECIAL && Ultimate.isAwakened(player)) {
+            if (ability != Ability.R_SPECIAL && Ultimate.isGojoAwakened(player)) {
                 cd = Math.max(1, Math.round(cd * GojoConfig.get().awakenedCooldownMult));
             }
             s.startCooldown(ability, now, cd);
             Characters.sendCooldown(player, ability, cd, cd);
         }
+    }
+
+    private static boolean launch(ServerEffect effect) {
+        EffectManager.add(effect);
+        return true;
     }
 
     /** Reverse Cursed Technique. Cooldown is stored in the world's save data so death/relog cannot reset it. */

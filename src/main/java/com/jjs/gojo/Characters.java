@@ -64,6 +64,19 @@ public final class Characters {
                 SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 1.0f, wanted == SORCERER ? 1.6f : 1.0f);
     }
 
+    /** Pick or switch the sorcerer character. Sorcerers only, never while transformed. */
+    public static void chooseHero(MinecraftServer server, ServerPlayerEntity player, int hero) {
+        if (hero != Heroes.GOJO && hero != Heroes.YUJI) return;
+        if (!isSorcerer(player)) {
+            GojoMod.LOGGER.warn("{} tried to pick a sorcerer character without being a Sorcerer; ignored",
+                    player.getName().getString());
+            return;
+        }
+        if (Ultimate.isAwakened(player)) return;
+        CharacterData.get(server).setHero(player.getUuid(), hero);
+        Ultimate.sync(player);
+    }
+
     public static void sync(ServerPlayerEntity p) {
         if (!ServerPlayNetworking.canSend(p, GojoNet.SYNC)) return;
         PacketByteBuf buf = PacketByteBufs.create();

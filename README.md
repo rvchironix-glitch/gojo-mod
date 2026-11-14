@@ -19,13 +19,27 @@ Fabric Loader 1.20.1 + Fabric API 0.92.2 + this jar in the `mods` folder (client
 | N | Twofold Kick |
 | C | Reverse Cursed Technique |
 | R | Hollow Purple (only while Limitless Awakened) |
-| V | Ultimate |
+| V | Ultimate (Gojo: Limitless Awakened 2:00, Yuji: Sukuna 1:00) |
+| J | Choose / switch sorcerer (Gojo or Yuji) |
 
 ## Ultimate
 Meter fills from damage dealt, damage taken and kills. At 100% press V for Limitless Awakened
 (exactly 120 s): +50% damage, half cooldowns, +40% Blue/Red radius, Hollow Purple unlocked.
 The meter resets when it ends. Tunables are in `config/gojomoveset.json`.
 
+## Characters
+Pick Gojo or Yuji on the first sorcerer join (press J to switch later; blocked while transformed).
+Move keys 1-4 (Z, X, H, N) map to the current character's moves:
+
+| Key | Gojo | Yuji | Sukuna (Yuji ultimate) |
+|---|---|---|---|
+| Z | Lapis Blue | Divergent Fist | Cleave |
+| X | Reversal Red | Black Flash | Dismantle |
+| H | Rapid Punches | Crushing Blow | Flame Arrow |
+| N | Twofold Kick | Rapid Strikes | Malevolent Pressure |
+
+Sukuna is a 60 s transformation, never a selectable character. The player skin is not replaced;
+Sukuna is shown with markings, extra eyes, aura, outline and title.
+
 ## Status
-Stage 5A done. Not yet implemented: Yuji / Sukuna, Gojo-vs-Yuji selection screen,
-touchscreen controls, HUD customization.
+Stages 5A and 5B done. Not yet implemented: touchscreen controls and HUD customization (Stage 5C).

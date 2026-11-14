@@ -19,21 +19,37 @@ public final class GojoHud {
     private GojoHud() {}
 
     private static Entry[] entries() {
-        return new Entry[]{
+        Entry rct = new Entry(Ability.RCT, "+", 0xFF4AFF8A, GojoClient.RCT);
+        Entry dash = new Entry(Ability.DASH, ">>", 0xFFCCCCCC, GojoClient.DASH);
+        Entry ult = new Entry(Ability.ULTIMATE, "U", 0xFF6FE3FF, GojoClient.ULT);
+        if (ClientState.hero == 2 && ClientState.awakened()) { // Sukuna
+            return new Entry[]{
+                    new Entry(Ability.CLEAVE, "CL", 0xFFFF3A3A, GojoClient.BLUE),
+                    new Entry(Ability.DISMANTLE, "DS", 0xFFFF7A7A, GojoClient.RED),
+                    new Entry(Ability.FLAME_ARROW, "FA", 0xFFFFA83A, GojoClient.PUNCHES),
+                    new Entry(Ability.MALEVOLENT_PRESSURE, "MP", 0xFFB04AFF, GojoClient.KICK),
+                    rct, dash, ult};
+        }
+        if (ClientState.hero == 2) { // Yuji
+            return new Entry[]{
+                    new Entry(Ability.DIVERGENT_FIST, "DF", 0xFFFFA83A, GojoClient.BLUE),
+                    new Entry(Ability.BLACK_FLASH, "BF", 0xFFB04AFF, GojoClient.RED),
+                    new Entry(Ability.CRUSHING_BLOW, "CB", 0xFFFFD83A, GojoClient.PUNCHES),
+                    new Entry(Ability.RAPID_STRIKES, "RS", 0xFFFF6A3A, GojoClient.KICK),
+                    rct, dash, ult};
+        }
+        return new Entry[]{ // Gojo
                 new Entry(Ability.LAPIS_BLUE, "B", 0xFF3A7BFF, GojoClient.BLUE),
                 new Entry(Ability.REVERSAL_RED, "R", 0xFFFF3A3A, GojoClient.RED),
                 new Entry(Ability.RAPID_PUNCHES, "P", 0xFFFFA83A, GojoClient.PUNCHES),
                 new Entry(Ability.TWOFOLD_KICK, "K", 0xFFFFD83A, GojoClient.KICK),
                 new Entry(Ability.R_SPECIAL, "HP", 0xFFB04AFF, GojoClient.SPECIAL),
-                new Entry(Ability.RCT, "+", 0xFF4AFF8A, GojoClient.RCT),
-                new Entry(Ability.DASH, ">>", 0xFFCCCCCC, GojoClient.DASH),
-                new Entry(Ability.ULTIMATE, "U", 0xFF6FE3FF, GojoClient.ULT),
-        };
+                rct, dash, ult};
     }
 
     public static void render(DrawContext ctx, float tickDelta) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.options.hudHidden || ClientState.type != 2) return;
+        if (mc.player == null || mc.options.hudHidden || ClientState.type != 2 || ClientState.hero == 0) return;
         TextRenderer tr = mc.textRenderer;
         int sw = mc.getWindow().getScaledWidth();
         int sh = mc.getWindow().getScaledHeight();
@@ -149,7 +165,7 @@ public final class GojoHud {
             float frac = ClientState.awakenedRemaining() / (float) ClientState.awakenedTotal();
             ctx.fillGradient(x, y, x + (int) (w * frac), y + h, 0xFFFFE680, 0xFFC08A00);
             int secs = (ClientState.awakenedRemaining() + 19) / 20;
-            label = "AWAKENED " + (secs / 60) + ":" + String.format("%02d", secs % 60);
+            label = (ClientState.hero == 2 ? "SUKUNA " : "AWAKENED ") + (secs / 60) + ":" + String.format("%02d", secs % 60);
         } else {
             float frac = MathHelper.clamp(ClientState.shownMeter / 100f, 0f, 1f);
             int fillColorB = full ? lerp(0xFF3A7BFF, 0xFFBBF3FF, pulse) : 0xFF3A7BFF;

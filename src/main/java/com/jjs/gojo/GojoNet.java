@@ -13,7 +13,9 @@ public final class GojoNet {
     public static final Identifier CHOOSE = new Identifier(GojoMod.MOD_ID, "choose");
     /** S2C: byte character type (0 none, 1 human, 2 sorcerer) */
     public static final Identifier SYNC = new Identifier(GojoMod.MOD_ID, "sync");
-    /** S2C: byte hero, float meter (0-100), int awakenedRemainingTicks */
+    /** C2S: byte hero (1 Gojo, 2 Yuji). Sorcerers only, never while transformed. */
+    public static final Identifier HERO = new Identifier(GojoMod.MOD_ID, "hero");
+    /** S2C: byte hero (0 = not chosen), float meter (0-100), int transformRemainingTicks, int transformTotalTicks */
     public static final Identifier ULT = new Identifier(GojoMod.MOD_ID, "ult");
     /** S2C: byte abilityId, int remainingTicks, int totalTicks */
     public static final Identifier COOLDOWN = new Identifier(GojoMod.MOD_ID, "cooldown");

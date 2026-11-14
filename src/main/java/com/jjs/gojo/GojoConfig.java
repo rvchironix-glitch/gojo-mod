@@ -72,6 +72,31 @@ public class GojoConfig {
     public float awakenedCooldownMult = 0.5f;
     public double awakenedRangeMult = 1.4;
 
+    // Yuji (normal form)
+    public int divergentCooldownTicks = 160;
+    public int divergentDelayTicks = 12;
+    public float divergentDamage1 = 6.0f;
+    public float divergentDamage2 = 9.0f;
+    public int blackFlashCooldownTicks = 300;
+    public float blackFlashDamage = 16.0f;
+    public int crushingCooldownTicks = 200;
+    public float crushingDamage = 10.0f;
+    public int strikesCooldownTicks = 220;
+    public int strikeCount = 8;
+    public float strikeDamage = 2.0f;
+    public float strikeFinisherDamage = 5.0f;
+
+    // Sukuna (transformation, fixed 60 s in code)
+    public int cleaveCooldownTicks = 100;
+    public float cleaveDamage = 12.0f;
+    public int dismantleCooldownTicks = 120;
+    public float dismantleDamage = 7.0f;
+    public int flameArrowCooldownTicks = 240;
+    public float flameArrowDamage = 14.0f;
+    public int pressureCooldownTicks = 400;
+    public float pressureDamagePerPulse = 4.0f;
+    public double pressureRadius = 11.0;
+
     public int maxGuard = 100;
     public double guardCostPerDamage = 4.0;
     public int guardBreakTicks = 60;
