@@ -21,6 +21,8 @@ Fabric Loader 1.20.1 + Fabric API 0.92.2 + this jar in the `mods` folder (client
 | R | Hollow Purple (only while Limitless Awakened) |
 | V | Ultimate (Gojo: Limitless Awakened 2:00, Yuji: Sukuna 1:00) |
 | J | Choose / switch sorcerer (Gojo or Yuji) |
+| O | Touch Ability Pad (tappable ability buttons) |
+| K | Customize Controls (move / resize / fade HUD) |
 
 ## Ultimate
 Meter fills from damage dealt, damage taken and kills. At 100% press V for Limitless Awakened
@@ -41,5 +43,13 @@ Move keys 1-4 (Z, X, H, N) map to the current character's moves:
 Sukuna is a 60 s transformation, never a selectable character. The player skin is not replaced;
 Sukuna is shown with markings, extra eyes, aura, outline and title.
 
+## HUD and touch controls
+- PC HUD: ability column on the right edge, ultimate meter directly above the armor row.
+- Customize Controls (K): Edit Mode ON/OFF, drag elements, resize (scroll or Size +/-), opacity, Reset Layout.
+  PC and touch layouts are separate and saved per player in `config/gojomoveset-hud.json`.
+- Touch: Java Edition has no touchscreen API. On phones the launcher emulates mouse/keyboard, so the touch
+  buttons live on the Ability Pad: bind a launcher button to the "Touch Ability Pad" key, tap it, then tap an
+  ability. Block toggles on/off. Auto-detection of mobile launchers is best-effort; override it in Customize Controls.
+
 ## Status
-Stages 5A and 5B done. Not yet implemented: touchscreen controls and HUD customization (Stage 5C).
+Stages 5A, 5B and 5C written. Not compiled or played by the author; see the delivery notes for known limits.

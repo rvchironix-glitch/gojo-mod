@@ -18,7 +18,10 @@ import org.lwjgl.glfw.GLFW;
 public class GojoClient implements ClientModInitializer {
     private static final String CAT = "key.categories.gojomoveset";
 
-    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT, ULT, CHARACTER;
+    public static KeyBinding DASH, BLOCK, SPECIAL, BLUE, RED, PUNCHES, KICK, RCT, ULT, CHARACTER, PAD, CUSTOMIZE;
+
+    /** Touch players toggle blocking with the Ability Pad (a tap cannot be held). */
+    public static boolean touchBlock;
 
     // double-tap tracking: 0 fwd, 1 back, 2 left, 3 right
     private static final boolean[] prevDown = new boolean[4];
@@ -44,6 +47,8 @@ public class GojoClient implements ClientModInitializer {
         KICK = reg("key.gojomoveset.kick", GLFW.GLFW_KEY_N);
         ULT = reg("key.gojomoveset.ultimate", GLFW.GLFW_KEY_V);
         CHARACTER = reg("key.gojomoveset.character", GLFW.GLFW_KEY_J);
+        PAD = reg("key.gojomoveset.pad", GLFW.GLFW_KEY_O);
+        CUSTOMIZE = reg("key.gojomoveset.customize", GLFW.GLFW_KEY_K);
         RCT = reg("key.gojomoveset.rct", GLFW.GLFW_KEY_C);
 
         ClientPlayNetworking.registerGlobalReceiver(GojoNet.SYNC, (client, handler, buf, responseSender) -> {
@@ -75,6 +80,7 @@ public class GojoClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientState.reset();
             lastBlockSent = false;
+            touchBlock = false;
         });
 
         HudRenderCallback.EVENT.register((ctx, tickDelta) -> GojoHud.render(ctx, tickDelta));
@@ -107,6 +113,20 @@ public class GojoClient implements ClientModInitializer {
             if (ClientState.type == 2 && ClientState.heroSynced && !ClientState.awakened()
                     && mc.currentScreen == null) {
                 mc.setScreen(new HeroSelectScreen());
+            }
+        }
+
+        while (PAD.wasPressed()) {
+            if (ClientState.type == 2 && ClientState.hero != 0 && mc.currentScreen == null) {
+                mc.setScreen(new AbilityPadScreen());
+            }
+        }
+        while (CUSTOMIZE.wasPressed()) {
+            if (mc.currentScreen != null) continue;
+            if (ClientState.type == 2 && ClientState.hero != 0) {
+                mc.setScreen(new CustomizeControlsScreen());
+            } else {
+                mc.player.sendMessage(net.minecraft.text.Text.literal("Customize Controls is for Sorcerers"), true);
             }
         }
 
@@ -148,10 +168,27 @@ public class GojoClient implements ClientModInitializer {
         while (RCT.wasPressed()) sendAbility(Ability.RCT, 0);
         while (ULT.wasPressed()) sendAbility(Ability.ULTIMATE, 0);
 
-        sendBlock(BLOCK.isPressed());
+        sendBlock(isBlocking());
     }
 
-    private static void sendAbility(Ability a, int dir) {
+    public static boolean isBlocking() {
+        return BLOCK != null && (BLOCK.isPressed() || touchBlock);
+    }
+
+    /** The move-slot / ability id the server expects for a HUD button (the server maps slots per character). */
+    public static Ability requestFor(GojoHud.Entry e) {
+        KeyBinding k = e.key();
+        if (k == BLUE) return Ability.LAPIS_BLUE;
+        if (k == RED) return Ability.REVERSAL_RED;
+        if (k == PUNCHES) return Ability.RAPID_PUNCHES;
+        if (k == KICK) return Ability.TWOFOLD_KICK;
+        if (k == SPECIAL) return Ability.R_SPECIAL;
+        if (k == RCT) return Ability.RCT;
+        if (k == ULT) return Ability.ULTIMATE;
+        return Ability.DASH;
+    }
+
+    public static void sendAbility(Ability a, int dir) {
         // Display-side gate only; the server enforces the real restriction.
         if (ClientState.type != 2 || ClientState.hero == 0) return;
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());

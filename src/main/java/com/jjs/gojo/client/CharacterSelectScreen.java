@@ -57,6 +57,14 @@ public class CharacterSelectScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         renderBackground(ctx);
 
+        // Text is drawn in a later batch than filled rectangles, so anything drawn "under" the confirm dialog
+        // would still show through it. While confirming, draw ONLY the dialog.
+        if (confirming != 0) {
+            drawConfirm(ctx, mouseX, mouseY);
+            super.render(ctx, mouseX, mouseY, delta);
+            return;
+        }
+
         var ms = ctx.getMatrices();
         ms.push();
         ms.translate(width / 2f, cardY() - 38, 0);
@@ -65,19 +73,14 @@ public class CharacterSelectScreen extends Screen {
         ms.pop();
         ctx.drawCenteredTextWithShadow(textRenderer, "This can only be chosen once.", width / 2, cardY() - 16, 0xAAAAAA);
 
-        boolean locked = confirming != 0;
         drawCard(ctx, sorcererX(), cardY(), "SORCERER",
                 "Master cursed techniques and wield Gojo's abilities.",
                 0xFF0B1F4D, 0xFF1D5BFF, 0xFF6FA8FF, 0xFFBBD6FF,
-                !locked && in(mouseX, mouseY, sorcererX(), cardY(), CARD_W, CARD_H));
+                in(mouseX, mouseY, sorcererX(), cardY(), CARD_W, CARD_H));
         drawCard(ctx, humanX(), cardY(), "HUMAN",
                 "Experience Minecraft without cursed techniques.",
                 0xFF202020, 0xFF4A4A4A, 0xFFAAAAAA, 0xFFE0E0E0,
-                !locked && in(mouseX, mouseY, humanX(), cardY(), CARD_W, CARD_H));
-
-        if (confirming != 0) {
-            drawConfirm(ctx, mouseX, mouseY);
-        }
+                in(mouseX, mouseY, humanX(), cardY(), CARD_W, CARD_H));
         super.render(ctx, mouseX, mouseY, delta);
     }
 
@@ -113,23 +116,25 @@ public class CharacterSelectScreen extends Screen {
     }
 
     private int dialogY() {
-        return height / 2 - 65;
+        return height / 2 - 70;
     }
 
     private void drawConfirm(DrawContext ctx, int mouseX, int mouseY) {
-        ctx.fill(0, 0, width, height, 0xC0000000);
         int dx = dialogX();
         int dy = dialogY();
         int dw = 320;
-        int dh = 130;
+        int dh = 140;
         ctx.fill(dx - 2, dy - 2, dx + dw + 2, dy + dh + 2, confirming == SORCERER ? 0xFF6FA8FF : 0xFFAAAAAA);
         ctx.fill(dx, dy, dx + dw, dy + dh, 0xFF12121C);
 
         String name = confirming == SORCERER ? "SORCERER" : "HUMAN";
         ctx.drawCenteredTextWithShadow(textRenderer, "Become a " + name + "?", width / 2, dy + 12, 0xFFFFFF);
+        ctx.drawCenteredTextWithShadow(textRenderer, confirming == SORCERER
+                ? "Master cursed techniques and wield Gojo's abilities."
+                : "Experience Minecraft without cursed techniques.", width / 2, dy + 26, 0xAAAAAA);
         List<OrderedText> warn = textRenderer.wrapLines(
                 Text.literal("Your choice is permanent and cannot be changed in this world."), dw - 40);
-        int wy = dy + 34;
+        int wy = dy + 46;
         for (OrderedText line : warn) {
             int w = textRenderer.getWidth(line);
             ctx.drawTextWithShadow(textRenderer, line, width / 2 - w / 2, wy, 0xFF5555);
@@ -151,7 +156,7 @@ public class CharacterSelectScreen extends Screen {
 
         if (confirming != 0) {
             int dx = dialogX();
-            int by = dialogY() + 130 - 34;
+            int by = dialogY() + 140 - 34;
             if (in(mx, my, dx + 20, by, 130, 24)) {
                 send(confirming);
             } else if (in(mx, my, dx + 320 - 150, by, 130, 24)) {
